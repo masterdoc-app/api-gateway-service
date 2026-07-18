@@ -1,0 +1,24 @@
+services:
+  gateway-blue:
+    image: ${GATEWAY_IMAGE:-api-gateway-service:local}
+    container_name: api-gateway-blue
+    env_file:
+      - /etc/masterdoc-api-gateway/.env
+    environment:
+      PORT: "8083"
+    ports:
+      - "127.0.0.1:8083:8083"
+    restart: unless-stopped
+    profiles: ["blue"]
+
+  gateway-green:
+    image: ${GATEWAY_IMAGE:-api-gateway-service:local}
+    container_name: api-gateway-green
+    env_file:
+      - /etc/masterdoc-api-gateway/.env
+    environment:
+      PORT: "8084"
+    ports:
+      - "127.0.0.1:8084:8084"
+    restart: unless-stopped
+    profiles: ["green"]

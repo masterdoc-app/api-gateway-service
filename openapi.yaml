@@ -1,0 +1,130 @@
+openapi: 3.1.0
+info:
+  title: Masterdoc API Gateway
+  version: 0.1.0
+  description: |
+    Single public API base for clients: `https://api.masterdoc.pro`.
+
+    - `GET /me` — userInfo + features (proxied to feature-service; requires Zitadel JWT)
+    - `/v1/*` — passthrough to Onyx backend (chat, assistants, reports, …)
+    - Login is NOT here — use Zitadel OIDC at `https://auth.formaverse.ru`
+
+servers:
+  - url: https://api.masterdoc.pro
+    description: Production (only API URL clients should use)
+  - url: http://127.0.0.1:8083
+    description: Local gateway
+
+paths:
+  /health:
+    get:
+      operationId: health
+      summary: Gateway liveness
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /me:
+    get:
+      operationId: getMe
+      summary: Current user + enabled features for client DI
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: User and features
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeResponse"
+        "401":
+          description: Missing or invalid JWT
+        "502":
+          description: feature-service unavailable
+
+  /v1/{path}:
+    parameters:
+      - name: path
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Path under backend (assistants, chat/sessions, report, …)
+    get:
+      operationId: proxyV1Get
+      summary: Proxy GET to backend
+      security: []
+      responses:
+        "200":
+          description: Upstream response
+        "502":
+          description: backend unavailable
+    post:
+      operationId: proxyV1Post
+      summary: Proxy POST to backend (incl. streaming where applicable)
+      security: []
+      responses:
+        "200":
+          description: Upstream response
+        "502":
+          description: backend unavailable
+    delete:
+      operationId: proxyV1Delete
+      summary: Proxy DELETE to backend
+      security: []
+      responses:
+        "200":
+          description: Upstream response
+        "502":
+          description: backend unavailable
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Zitadel access_token (Authorization Code + PKCE)
+
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          example: ok
+
+    UserInfo:
+      type: object
+      required: [id, roles]
+      properties:
+        id:
+          type: string
+        givenName:
+          type: string
+        familyName:
+          type: string
+        email:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+
+    MeResponse:
+      type: object
+      required: [userInfo, features]
+      properties:
+        userInfo:
+          $ref: "#/components/schemas/UserInfo"
+        features:
+          type: array
+          items:
+            type: string
+          example: [board]
