@@ -5,7 +5,7 @@
 | What | Value |
 |------|--------|
 | **Only API base** | `https://api.masterdoc.pro` |
-| Login (OIDC, not API) | `https://auth.formaverse.ru` |
+| Login (OIDC UI) | `https://auth.formaverse.ru` (URL also via `GET /auth/url`) |
 
 Clients call:
 

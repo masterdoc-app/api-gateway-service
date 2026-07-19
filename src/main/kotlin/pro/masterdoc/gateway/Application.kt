@@ -37,6 +37,7 @@ fun Application.module(
             call.respond(HealthResponse(status = "ok"))
         }
     }
+    installAuthUrlRoutes(config)
     installMeRoutes(deps)
     installV1ProxyRoutes(deps)
 }

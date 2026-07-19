@@ -5,9 +5,10 @@ info:
   description: |
     Single public API base for clients: `https://api.masterdoc.pro`.
 
+    - `GET /auth/url` — OIDC authorize URL (no auth; first call for clients)
     - `GET /me` — userInfo + features (proxied to feature-service; requires Zitadel JWT)
     - `/v1/*` — passthrough to Onyx backend (chat, assistants, reports, …)
-    - Login is NOT here — use Zitadel OIDC at `https://auth.formaverse.ru`
+    - Login UI itself is Zitadel; clients open `authUrl` from `/auth/url`
 
 servers:
   - url: https://api.masterdoc.pro
@@ -28,6 +29,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthResponse"
+
+  /auth/url:
+    get:
+      operationId: getAuthUrl
+      summary: OIDC authorize URL for client login (public)
+      security: []
+      responses:
+        "200":
+          description: Where the client should start Authorization Code + PKCE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUrlResponse"
 
   /me:
     get:
@@ -99,6 +113,15 @@ components:
         status:
           type: string
           example: ok
+
+    AuthUrlResponse:
+      type: object
+      required: [authUrl]
+      properties:
+        authUrl:
+          type: string
+          format: uri
+          example: https://auth.formaverse.ru/oauth/v2/authorize
 
     UserInfo:
       type: object
