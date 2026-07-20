@@ -41,26 +41,30 @@ jobs:
           fi
           install -m 600 /dev/null /tmp/deploy_key
           printf '%s\n' "$SSH_KEY" > /tmp/deploy_key
-          SSH=(ssh -i /tmp/deploy_key -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes)
-          "${SSH[@]}" "$DEPLOY_USER@$DEPLOY_HOST" 'set -euo pipefail
+          SSH_OPTS="-i /tmp/deploy_key -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes"
+          # shellcheck disable=SC2086
+          ssh $SSH_OPTS "$DEPLOY_USER@$DEPLOY_HOST" "set -euo pipefail
             mkdir -p /opt/api-gateway-service/deploy /etc/masterdoc-api-gateway
             if [ ! -f /etc/masterdoc-api-gateway/active-slot ]; then echo blue > /etc/masterdoc-api-gateway/active-slot; fi
             if [ ! -f /etc/masterdoc-api-gateway/.env ]; then
-              cat > /etc/masterdoc-api-gateway/.env <<EOF
-PORT=8083
-ZITADEL_ISSUER=https://auth.formaverse.ru
-ZITADEL_JWK_SET_URI=https://auth.formaverse.ru/oauth/v2/keys
-FEATURE_SERVICE_BASE_URL=http://127.0.0.1:8082
-BACKEND_BASE_URL=http://127.0.0.1:8081
-CORS_ORIGINS=https://copilot.formaverse.ru,https://copilot.masterdoc.pro,http://localhost:8080
-EOF
+              printf '%s\n' \
+                'PORT=8083' \
+                'ZITADEL_ISSUER=https://auth.formaverse.ru' \
+                'ZITADEL_JWK_SET_URI=https://auth.formaverse.ru/oauth/v2/keys' \
+                'FEATURE_SERVICE_BASE_URL=http://127.0.0.1:8082' \
+                'BACKEND_BASE_URL=http://127.0.0.1:8081' \
+                'CORS_ORIGINS=https://copilot.formaverse.ru,https://copilot.masterdoc.pro,http://localhost:8080' \
+                > /etc/masterdoc-api-gateway/.env
               chmod 600 /etc/masterdoc-api-gateway/.env
-            fi'
-          rsync -az -e "ssh -i /tmp/deploy_key -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes" \
+            fi"
+          # shellcheck disable=SC2086
+          rsync -az -e "ssh $SSH_OPTS" \
             deploy/ "$DEPLOY_USER@$DEPLOY_HOST:/opt/api-gateway-service/deploy/"
-          scp -i /tmp/deploy_key -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes \
+          # shellcheck disable=SC2086
+          scp $SSH_OPTS \
             /tmp/gateway.tar.gz "$DEPLOY_USER@$DEPLOY_HOST:/tmp/gateway.tar.gz"
-          "${SSH[@]}" "$DEPLOY_USER@$DEPLOY_HOST" \
+          # shellcheck disable=SC2086
+          ssh $SSH_OPTS "$DEPLOY_USER@$DEPLOY_HOST" \
             "gunzip -c /tmp/gateway.tar.gz | docker load && \
              export GATEWAY_IMAGE=api-gateway-service:${{ github.sha }} && \
              chmod +x /opt/api-gateway-service/deploy/blue-green.sh && \
