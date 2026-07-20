@@ -58,8 +58,11 @@ Green slot uses `PORT=8084` via compose.
 | `DEPLOY_SSH_PRIVATE_KEY` | SSH to VPS |
 | `DEPLOY_USER` | SSH user |
 | `DEPLOY_HOST` | VPS host |
+| `ZITADEL_ORG_ID` | Org for Management API user ops (synced to VPS `.env`) |
+| `ZITADEL_PROJECT_ID` | Project for role grants, e.g. `382623622436487171` (masterdoc-toir) |
+| `ZITADEL_MGMT_TOKEN` | PAT with user/grant management (prefer `terraform-masterdoc` / repo secret `ZITADEL_TOKEN` in masterdoc-zitadel over bootstrap `login-client.pat`) |
 
-Env file on VPS is not committed.
+Env file on VPS is not committed. Deploy job upserts the three `ZITADEL_*` admin vars when secrets are set.
 
 ## Cutover checklist (nginx)
 
