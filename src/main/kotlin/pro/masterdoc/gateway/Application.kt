@@ -49,6 +49,7 @@ data class GatewayDeps(
     val tokenValidator: TokenValidator,
     val zitadelTokenClient: ZitadelTokenClient =
         ZitadelTokenClient { throw UpstreamUnavailableException("zitadel token client not configured") },
+    val zitadelAdminClient: ZitadelAdminClient = ZitadelAdminClient.unconfigured(),
 ) {
     companion object {
         fun live(config: GatewayConfig): GatewayDeps =
