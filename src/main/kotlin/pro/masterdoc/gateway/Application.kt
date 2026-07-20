@@ -41,6 +41,7 @@ fun Application.module(
     installAuthTokenRoutes(deps)
     installMeRoutes(deps)
     installV1ProxyRoutes(deps)
+    installAdminUserRoutes(deps)
 }
 
 data class GatewayDeps(
