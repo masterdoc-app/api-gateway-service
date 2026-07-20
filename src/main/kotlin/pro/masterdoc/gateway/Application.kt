@@ -58,6 +58,7 @@ data class GatewayDeps(
                 backendClient = BackendProxyClient.http(config.backendBaseUrl),
                 tokenValidator = TokenValidator.jwks(config.zitadelIssuer, config.zitadelJwkSetUri),
                 zitadelTokenClient = ZitadelTokenClient.http(config.zitadelIssuer),
+                zitadelAdminClient = ZitadelAdminClient.http(config),
             )
     }
 }
