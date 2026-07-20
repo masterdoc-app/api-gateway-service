@@ -38,6 +38,7 @@ fun Application.module(
         }
     }
     installAuthUrlRoutes(config)
+    installAuthTokenRoutes(deps)
     installMeRoutes(deps)
     installV1ProxyRoutes(deps)
 }
@@ -46,6 +47,8 @@ data class GatewayDeps(
     val featureClient: FeatureServiceClient,
     val backendClient: BackendProxyClient,
     val tokenValidator: TokenValidator,
+    val zitadelTokenClient: ZitadelTokenClient =
+        ZitadelTokenClient { throw UpstreamUnavailableException("zitadel token client not configured") },
 ) {
     companion object {
         fun live(config: GatewayConfig): GatewayDeps =
@@ -53,6 +56,7 @@ data class GatewayDeps(
                 featureClient = FeatureServiceClient.http(config.featureServiceBaseUrl),
                 backendClient = BackendProxyClient.http(config.backendBaseUrl),
                 tokenValidator = TokenValidator.jwks(config.zitadelIssuer, config.zitadelJwkSetUri),
+                zitadelTokenClient = ZitadelTokenClient.http(config.zitadelIssuer),
             )
     }
 }

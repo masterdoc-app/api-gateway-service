@@ -6,12 +6,14 @@ Ktor gateway — **единственный API URL** для клиентов: `
 |------|------|----------|
 | `GET /health` | — | gateway |
 | `GET /auth/url` | — | gateway → `{issuer}/oauth/v2/authorize` |
+| `POST /auth/token` | — | BFF → Zitadel `/oauth/v2/token` |
 | `GET /me` | Bearer Zitadel JWT | feature-service `:8082` |
 | `/v1/*` | passthrough | backend `:8081` |
 
-Login UI: Zitadel. Clients first call `GET /auth/url`, then open `authUrl` (OIDC PKCE).
+Клиент знает только gateway. Логин UI — Zitadel; обмен code/refresh — `POST /auth/token`.
 
-Контракт для Cursor/клиентов: [`openapi.yaml`](openapi.yaml).  
+Контракт: [`openapi.yaml`](openapi.yaml).  
+Auth простыми словами: [`docs/AUTH.md`](docs/AUTH.md).  
 Секреты и cutover: [`docs/SECRETS_AND_DOMAINS.md`](docs/SECRETS_AND_DOMAINS.md).
 
 ## Local

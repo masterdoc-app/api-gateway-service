@@ -103,3 +103,36 @@ fun interface TokenValidator {
         fun rejecting(): TokenValidator = TokenValidator { null }
     }
 }
+
+/** Proxies OAuth token form body to Zitadel `POST /oauth/v2/token`. */
+fun interface ZitadelTokenClient {
+    suspend fun exchange(formBody: String): UpstreamResult
+
+    companion object {
+        fun http(issuer: String): ZitadelTokenClient = HttpZitadelTokenClient(issuer)
+    }
+}
+
+class HttpZitadelTokenClient(
+    private val issuer: String,
+    private val client: HttpClient = HttpClient(CIO),
+) : ZitadelTokenClient {
+    override suspend fun exchange(formBody: String): UpstreamResult {
+        try {
+            val base = issuer.trimEnd('/')
+            val response: HttpResponse =
+                client.request("$base/oauth/v2/token") {
+                    method = HttpMethod.Post
+                    header(HttpHeaders.ContentType, "application/x-www-form-urlencoded")
+                    setBody(formBody)
+                }
+            return UpstreamResult(
+                status = response.status,
+                contentType = response.headers[HttpHeaders.ContentType],
+                body = response.bodyAsBytes(),
+            )
+        } catch (e: Exception) {
+            throw UpstreamUnavailableException("zitadel token endpoint unavailable", e)
+        }
+    }
+}
