@@ -46,15 +46,17 @@ interface ZitadelAdminClient {
 
         fun http(config: GatewayConfig): ZitadelAdminClient {
             if (config.zitadelMgmtToken.isBlank()) {
-                return tokenNotConfiguredClient()
+                return notConfiguredClient("ZITADEL_MGMT_TOKEN not set")
+            }
+            if (config.zitadelOrgId.isBlank()) {
+                return notConfiguredClient("ZITADEL_ORG_ID not set")
             }
             return HttpZitadelAdminClient(config)
         }
 
-        private fun tokenNotConfiguredClient(): ZitadelAdminClient =
+        private fun notConfiguredClient(message: String): ZitadelAdminClient =
             object : ZitadelAdminClient {
-                private fun fail(): Nothing =
-                    throw ZitadelAdminException.Upstream("ZITADEL_MGMT_TOKEN not set")
+                private fun fail(): Nothing = throw ZitadelAdminException.Upstream(message)
 
                 override suspend fun inviteUser(request: InviteUserRequest): AdminUser = fail()
 
@@ -87,12 +89,16 @@ class HttpZitadelAdminClient(
             }
         val createResponse = postJson("$baseUrl/v2/users/human", createBody.toString())
         ensureSuccess(createResponse) { status, body ->
-            when (status) {
-                HttpStatusCode.Conflict -> throw ZitadelAdminException.Conflict(extractMessage(body, "email already registered"))
-                else -> mapHttpError(status, body)
+            val message = extractMessage(body, status.description)
+            when {
+                status == HttpStatusCode.Conflict -> throw ZitadelAdminException.Conflict(message)
+                isDuplicateEmailError(status, body, message) -> throw ZitadelAdminException.Conflict(message)
+                else -> mapZitadelHttpError(status, message)
             }
         }
-        val created = json.decodeFromString<ZitadelCreateHumanResponse>(createResponse.body)
+        val created = decodeResponse(createResponse.body) {
+            json.decodeFromString<ZitadelCreateHumanResponse>(createResponse.body)
+        }
         val userId =
             created.userId?.takeIf { it.isNotBlank() }
                 ?: throw ZitadelAdminException.Upstream("zitadel create user response missing userId")
@@ -118,7 +124,10 @@ class HttpZitadelAdminClient(
             }
         val usersResponse = postJson("$baseUrl/management/v1/users/_search", searchBody.toString())
         ensureSuccess(usersResponse)
-        val usersSearch = json.decodeFromString<ZitadelUsersSearchResponse>(usersResponse.body)
+        val usersSearch =
+            decodeResponse(usersResponse.body) {
+                json.decodeFromString<ZitadelUsersSearchResponse>(usersResponse.body)
+            }
         val grantsByUserId = loadProjectGrantsByUserId()
 
         val items =
@@ -152,7 +161,7 @@ class HttpZitadelAdminClient(
 
     override suspend fun resendInvite(userId: String) {
         val user = findUser(userId) ?: throw ZitadelAdminException.NotFound("user not found")
-        if (UserStateMapper.fromZitadel(user.state) == "active") {
+        if (UserStateMapper.fromZitadel(user.state, user.human?.email?.isEmailVerified) == "active") {
             throw ZitadelAdminException.Conflict("user is already active")
         }
         val body =
@@ -195,7 +204,9 @@ class HttpZitadelAdminClient(
             }
         val response = postJson("$baseUrl/management/v1/users/_search", searchBody.toString())
         ensureSuccess(response)
-        return json.decodeFromString<ZitadelUsersSearchResponse>(response.body).result.firstOrNull()
+        return decodeResponse(response.body) {
+            json.decodeFromString<ZitadelUsersSearchResponse>(response.body).result.firstOrNull()
+        }
     }
 
     private suspend fun findUserGrant(userId: String): ZitadelUserGrant? {
@@ -225,7 +236,9 @@ class HttpZitadelAdminClient(
             }
         val response = postJson("$baseUrl/management/v1/users/grants/_search", searchBody.toString())
         ensureSuccess(response)
-        return json.decodeFromString<ZitadelGrantsSearchResponse>(response.body).result.firstOrNull()
+        return decodeResponse(response.body) {
+            json.decodeFromString<ZitadelGrantsSearchResponse>(response.body).result.firstOrNull()
+        }
     }
 
     private suspend fun loadProjectGrantsByUserId(): Map<String, List<String>> {
@@ -248,7 +261,10 @@ class HttpZitadelAdminClient(
             }
         val response = postJson("$baseUrl/management/v1/users/grants/_search", searchBody.toString())
         ensureSuccess(response)
-        val grants = json.decodeFromString<ZitadelGrantsSearchResponse>(response.body).result
+        val grants =
+            decodeResponse(response.body) {
+                json.decodeFromString<ZitadelGrantsSearchResponse>(response.body).result
+            }
         return grants
             .groupBy { it.userId.orEmpty() }
             .mapValues { (_, userGrants) -> userGrants.flatMap { it.roleKeys }.distinct() }
@@ -290,7 +306,9 @@ class HttpZitadelAdminClient(
 
     private fun ensureSuccess(
         response: HttpTextResponse,
-        onError: (HttpStatusCode, String) -> Nothing = { status, body -> mapHttpError(status, body) },
+        onError: (HttpStatusCode, String) -> Nothing = { status, body ->
+            mapZitadelHttpError(status, extractMessage(body, status.description))
+        },
     ) {
         if (!response.status.isSuccess()) {
             onError(response.status, response.body)
@@ -299,20 +317,15 @@ class HttpZitadelAdminClient(
 
     private fun io.ktor.client.request.HttpRequestBuilder.applyAuthHeaders() {
         header(HttpHeaders.Authorization, "Bearer ${config.zitadelMgmtToken}")
-        if (config.zitadelOrgId.isNotBlank()) {
-            header("x-zitadel-orgid", config.zitadelOrgId)
-        }
+        header("x-zitadel-orgid", config.zitadelOrgId)
     }
 
-    private fun mapHttpError(status: HttpStatusCode, body: String): Nothing {
-        val message = extractMessage(body, status.description)
-        throw when (status) {
-            HttpStatusCode.Conflict -> ZitadelAdminException.Conflict(message)
-            HttpStatusCode.NotFound -> ZitadelAdminException.NotFound(message)
-            HttpStatusCode.BadRequest -> ZitadelAdminException.BadRequest(message)
-            else -> ZitadelAdminException.Upstream("zitadel returned ${status.value}: $message")
+    private inline fun <T> decodeResponse(body: String, decode: () -> T): T =
+        try {
+            decode()
+        } catch (e: Exception) {
+            throw ZitadelAdminException.Upstream("zitadel response decode failed: ${e.message}")
         }
-    }
 
     private fun extractMessage(body: String, fallback: String): String {
         if (body.isBlank()) return fallback
@@ -338,7 +351,36 @@ class HttpZitadelAdminClient(
 }
 
 @Serializable
-private data class ZitadelErrorResponse(val message: String? = null)
+private data class ZitadelErrorResponse(
+    val message: String? = null,
+    val code: String? = null,
+)
+
+internal fun mapZitadelHttpError(status: HttpStatusCode, message: String): Nothing {
+    throw when (status) {
+        HttpStatusCode.Conflict -> ZitadelAdminException.Conflict(message)
+        HttpStatusCode.NotFound -> ZitadelAdminException.NotFound(message)
+        HttpStatusCode.BadRequest -> ZitadelAdminException.BadRequest(message)
+        else -> ZitadelAdminException.Upstream("zitadel returned ${status.value}: $message")
+    }
+}
+
+internal fun isDuplicateEmailError(status: HttpStatusCode, body: String, message: String): Boolean {
+    if (status != HttpStatusCode.BadRequest && status != HttpStatusCode.Conflict) return false
+    val parsed =
+        runCatching {
+            Json {
+                ignoreUnknownKeys = true
+                isLenient = true
+            }.decodeFromString<ZitadelErrorResponse>(body)
+        }.getOrNull()
+    val slug = parsed?.code.orEmpty()
+    val haystack = listOf(message, parsed?.message, slug, body).joinToString(" ").lowercase()
+    return haystack.contains("already_exists") ||
+        haystack.contains("already exists") ||
+        slug.contains("ALREADY_EXISTS", ignoreCase = true) ||
+        (haystack.contains("email") && (haystack.contains("exist") || haystack.contains("duplicate") || haystack.contains("registered")))
+}
 
 class FakeZitadelAdminClient : ZitadelAdminClient {
     private val usersById = linkedMapOf<String, StoredUser>()
@@ -392,13 +434,35 @@ class FakeZitadelAdminClient : ZitadelAdminClient {
         user.inviteSent = true
     }
 
+    fun seed(user: AdminUser) {
+        val emailKey = user.email.lowercase()
+        usersById[user.id] =
+            StoredUser(
+                id = user.id,
+                email = user.email,
+                givenName = user.givenName,
+                familyName = user.familyName,
+                roles = user.roles.toMutableList(),
+                state = user.state,
+                inviteSent = user.inviteSent ?: false,
+            )
+        idByEmail[emailKey] = user.id
+    }
+
+    fun markActive(userId: String) {
+        val user =
+            usersById[userId]
+                ?: throw ZitadelAdminException.NotFound("user not found")
+        user.state = "active"
+    }
+
     private data class StoredUser(
         val id: String,
         val email: String,
         val givenName: String,
         val familyName: String,
         val roles: MutableList<String>,
-        val state: String,
+        var state: String,
         var inviteSent: Boolean,
     ) {
         fun toAdminUser(includeInviteSent: Boolean): AdminUser =

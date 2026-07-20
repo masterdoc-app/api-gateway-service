@@ -36,7 +36,7 @@ class ZitadelAdminMappingTest {
                 human =
                     ZitadelHuman(
                         profile = ZitadelHumanProfile(givenName = "John", familyName = "Smith"),
-                        email = ZitadelHumanEmail(email = "john@example.com"),
+                        email = ZitadelHumanEmail(email = "john@example.com", isEmailVerified = true),
                     ),
             )
 
@@ -44,5 +44,23 @@ class ZitadelAdminMappingTest {
 
         assertEquals("active", admin.state)
         assertNull(admin.inviteSent)
+    }
+
+    @Test
+    fun `maps active zitadel user without verified email as invited`() {
+        val user =
+            ZitadelManagementUser(
+                id = "u3",
+                state = "USER_STATE_ACTIVE",
+                human =
+                    ZitadelHuman(
+                        profile = ZitadelHumanProfile(givenName = "New", familyName = "User"),
+                        email = ZitadelHumanEmail(email = "new@example.com", isEmailVerified = false),
+                    ),
+            )
+
+        val admin = ZitadelAdminMapping.toAdminUser(user, roles = listOf("viewer"), includeInviteSent = true)
+
+        assertEquals("invited", admin.state)
     }
 }

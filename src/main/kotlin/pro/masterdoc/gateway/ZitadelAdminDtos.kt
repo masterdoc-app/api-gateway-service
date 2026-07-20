@@ -54,6 +54,7 @@ internal data class ZitadelHumanProfile(
 @Serializable
 internal data class ZitadelHumanEmail(
     val email: String? = null,
+    @SerialName("isEmailVerified") val isEmailVerified: Boolean? = null,
 )
 
 @Serializable
@@ -98,7 +99,7 @@ internal object ZitadelAdminMapping {
             givenName = profile?.resolvedGivenName().orEmpty(),
             familyName = profile?.resolvedFamilyName().orEmpty(),
             roles = roles,
-            state = UserStateMapper.fromZitadel(user.state),
+            state = UserStateMapper.fromZitadel(user.state, human?.email?.isEmailVerified),
             inviteSent = inviteSent.takeIf { includeInviteSent },
         )
     }
