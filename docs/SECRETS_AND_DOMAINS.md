@@ -26,14 +26,30 @@ Do **not** expose `feature-service:8082` or `backend:8081` publicly.
 PORT=8083
 ZITADEL_ISSUER=https://auth.fixaverse.ru
 ZITADEL_JWK_SET_URI=https://auth.fixaverse.ru/oauth/v2/keys
+ZITADEL_ORG_ID=<zitadel-org-id>
+ZITADEL_PROJECT_ID=<masterdoc-toir-project-id>
+ZITADEL_MGMT_TOKEN=<pat-with-user-and-grant-management>
 FEATURE_SERVICE_BASE_URL=http://127.0.0.1:8082
 BACKEND_BASE_URL=http://127.0.0.1:8081
-CORS_ORIGINS=https://copilot.formaverse.ru,https://copilot.masterdoc.pro,http://localhost:8080
+CORS_ORIGINS=https://app.fixaverse.ru,https://copilot.fixaverse.ru,https://copilot.formaverse.ru,https://copilot.masterdoc.pro,http://localhost:8080
 ```
 
 Green slot uses `PORT=8084` via compose.
 
-**Zitadel:** no new client secret for the gateway (JWT validation only).
+**Zitadel JWT validation:** `ZITADEL_ISSUER` + `ZITADEL_JWK_SET_URI` only (no client secret for end-user OAuth).
+
+**Zitadel Management API** (`/admin/users*`):
+
+| Variable | Purpose |
+|----------|---------|
+| `ZITADEL_ORG_ID` | Org where users are created and listed |
+| `ZITADEL_PROJECT_ID` | Project for role grants (e.g. `masterdoc-toir`) |
+| `ZITADEL_MGMT_TOKEN` | Personal access token (PAT) with rights to manage users and grants in that org |
+
+- PAT is **server-only** — never ship to browser, mobile, or admin SPA bundles.
+- Prefer a **dedicated machine user** service account with minimal IAM; do not reuse a human admin password.
+- If unset, admin routes return `502` with a misconfiguration message on first Zitadel call.
+- See `openapi.yaml` for `/admin/users*` contract; callers still need Bearer JWT + feature `user_invite`.
 
 ## GitHub Secrets (`masterdoc-app/api-gateway-service`)
 
