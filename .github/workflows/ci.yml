@@ -33,6 +33,9 @@ jobs:
           SSH_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          ZITADEL_ORG_ID: ${{ secrets.ZITADEL_ORG_ID }}
+          ZITADEL_PROJECT_ID: ${{ secrets.ZITADEL_PROJECT_ID }}
+          ZITADEL_MGMT_TOKEN: ${{ secrets.ZITADEL_MGMT_TOKEN }}
         run: |
           set -euo pipefail
           if [ -z "${SSH_KEY:-}" ] || [ -z "${DEPLOY_HOST:-}" ]; then
@@ -43,20 +46,42 @@ jobs:
           printf '%s\n' "$SSH_KEY" > /tmp/deploy_key
           SSH_OPTS="-i /tmp/deploy_key -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes"
           # shellcheck disable=SC2086
-          ssh $SSH_OPTS "$DEPLOY_USER@$DEPLOY_HOST" "set -euo pipefail
-            mkdir -p /opt/api-gateway-service/deploy /etc/masterdoc-api-gateway
-            if [ ! -f /etc/masterdoc-api-gateway/active-slot ]; then echo blue > /etc/masterdoc-api-gateway/active-slot; fi
-            if [ ! -f /etc/masterdoc-api-gateway/.env ]; then
-              printf '%s\n' \
-                'PORT=8083' \
-                'ZITADEL_ISSUER=https://auth.fixaverse.ru' \
-                'ZITADEL_JWK_SET_URI=https://auth.fixaverse.ru/oauth/v2/keys' \
-                'FEATURE_SERVICE_BASE_URL=http://host.docker.internal:8082' \
-                'BACKEND_BASE_URL=http://host.docker.internal:8081' \
-                'CORS_ORIGINS=https://copilot.formaverse.ru,https://copilot.masterdoc.pro,http://localhost:8080' \
-                > /etc/masterdoc-api-gateway/.env
-              chmod 600 /etc/masterdoc-api-gateway/.env
-            fi"
+          ssh $SSH_OPTS "$DEPLOY_USER@$DEPLOY_HOST" env \
+            "ZITADEL_ORG_ID=${ZITADEL_ORG_ID:-}" \
+            "ZITADEL_PROJECT_ID=${ZITADEL_PROJECT_ID:-}" \
+            "ZITADEL_MGMT_TOKEN=${ZITADEL_MGMT_TOKEN:-}" \
+            bash -s <<'REMOTE'
+          set -euo pipefail
+          mkdir -p /opt/api-gateway-service/deploy /etc/masterdoc-api-gateway
+          if [ ! -f /etc/masterdoc-api-gateway/active-slot ]; then echo blue > /etc/masterdoc-api-gateway/active-slot; fi
+          if [ ! -f /etc/masterdoc-api-gateway/.env ]; then
+            printf '%s\n' \
+              'PORT=8083' \
+              'ZITADEL_ISSUER=https://auth.fixaverse.ru' \
+              'ZITADEL_JWK_SET_URI=https://auth.fixaverse.ru/oauth/v2/keys' \
+              'ZITADEL_ORG_ID=' \
+              'ZITADEL_PROJECT_ID=' \
+              'ZITADEL_MGMT_TOKEN=' \
+              'FEATURE_SERVICE_BASE_URL=http://host.docker.internal:8082' \
+              'BACKEND_BASE_URL=http://host.docker.internal:8081' \
+              'CORS_ORIGINS=https://app.fixaverse.ru,https://copilot.fixaverse.ru,https://copilot.formaverse.ru,https://copilot.masterdoc.pro,http://localhost:8080' \
+              > /etc/masterdoc-api-gateway/.env
+            chmod 600 /etc/masterdoc-api-gateway/.env
+          fi
+          upsert_env() {
+            key="$1"
+            value="$2"
+            if grep -q "^${key}=" /etc/masterdoc-api-gateway/.env; then
+              sed -i "s|^${key}=.*|${key}=${value}|" /etc/masterdoc-api-gateway/.env
+            else
+              printf '%s\n' "${key}=${value}" >> /etc/masterdoc-api-gateway/.env
+            fi
+          }
+          if [ -n "${ZITADEL_ORG_ID:-}" ]; then upsert_env ZITADEL_ORG_ID "$ZITADEL_ORG_ID"; fi
+          if [ -n "${ZITADEL_PROJECT_ID:-}" ]; then upsert_env ZITADEL_PROJECT_ID "$ZITADEL_PROJECT_ID"; fi
+          if [ -n "${ZITADEL_MGMT_TOKEN:-}" ]; then upsert_env ZITADEL_MGMT_TOKEN "$ZITADEL_MGMT_TOKEN"; fi
+          chmod 600 /etc/masterdoc-api-gateway/.env
+          REMOTE
           # shellcheck disable=SC2086
           rsync -az -e "ssh $SSH_OPTS" \
             deploy/ "$DEPLOY_USER@$DEPLOY_HOST:/opt/api-gateway-service/deploy/"
