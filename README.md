@@ -21,8 +21,8 @@ Auth простыми словами: [`docs/AUTH.md`](docs/AUTH.md).
 ```bash
 export FEATURE_SERVICE_BASE_URL=http://127.0.0.1:8082
 export BACKEND_BASE_URL=http://127.0.0.1:8081
-export ZITADEL_ISSUER=https://auth.formaverse.ru
-export ZITADEL_JWK_SET_URI=https://auth.formaverse.ru/oauth/v2/keys
+export ZITADEL_ISSUER=https://auth.fixaverse.ru
+export ZITADEL_JWK_SET_URI=https://auth.fixaverse.ru/oauth/v2/keys
 ./gradlew run
 curl -s http://127.0.0.1:8083/health
 ```

@@ -6,6 +6,9 @@ services:
       - /etc/masterdoc-api-gateway/.env
     environment:
       PORT: "8083"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "auth.fixaverse.ru:host-gateway"
     ports:
       - "127.0.0.1:8083:8083"
     restart: unless-stopped
@@ -18,6 +21,9 @@ services:
       - /etc/masterdoc-api-gateway/.env
     environment:
       PORT: "8084"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "auth.fixaverse.ru:host-gateway"
     ports:
       - "127.0.0.1:8084:8084"
     restart: unless-stopped
