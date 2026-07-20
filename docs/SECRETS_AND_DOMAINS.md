@@ -5,7 +5,7 @@
 | What | Value |
 |------|--------|
 | **Only API base** | `https://api.masterdoc.pro` |
-| Login (OIDC UI) | `https://auth.formaverse.ru` (URL also via `GET /auth/url`) |
+| Login (OIDC UI) | `https://auth.fixaverse.ru` (URL also via `GET /auth/url`) |
 
 Clients call:
 
@@ -24,8 +24,8 @@ Do **not** expose `feature-service:8082` or `backend:8081` publicly.
 
 ```bash
 PORT=8083
-ZITADEL_ISSUER=https://auth.formaverse.ru
-ZITADEL_JWK_SET_URI=https://auth.formaverse.ru/oauth/v2/keys
+ZITADEL_ISSUER=https://auth.fixaverse.ru
+ZITADEL_JWK_SET_URI=https://auth.fixaverse.ru/oauth/v2/keys
 FEATURE_SERVICE_BASE_URL=http://127.0.0.1:8082
 BACKEND_BASE_URL=http://127.0.0.1:8081
 CORS_ORIGINS=https://copilot.formaverse.ru,https://copilot.masterdoc.pro,http://localhost:8080

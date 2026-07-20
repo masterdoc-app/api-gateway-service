@@ -33,4 +33,5 @@
 
 - Один swagger / один `base_url` для REST — gateway.
 - `POST /auth/token` принимает оба grant: code и refresh.
-- UI логина остаётся на домене IdP; это нормально для OIDC.
+- UI логина остаётся на IdP (`auth.fixaverse.ru`); это нормально для OIDC.
+- Gateway на VPS резолвит IdP через `extra_hosts` → host nginx (DNS с контейнера часто недоступен).

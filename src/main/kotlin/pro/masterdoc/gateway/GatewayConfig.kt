@@ -12,10 +12,10 @@ data class GatewayConfig(
         fun fromEnv(): GatewayConfig =
             GatewayConfig(
                 port = System.getenv("PORT")?.toIntOrNull() ?: 8083,
-                zitadelIssuer = System.getenv("ZITADEL_ISSUER") ?: "https://auth.formaverse.ru",
+                zitadelIssuer = System.getenv("ZITADEL_ISSUER") ?: "https://auth.fixaverse.ru",
                 zitadelJwkSetUri =
                     System.getenv("ZITADEL_JWK_SET_URI")
-                        ?: "https://auth.formaverse.ru/oauth/v2/keys",
+                        ?: "https://auth.fixaverse.ru/oauth/v2/keys",
                 featureServiceBaseUrl =
                     System.getenv("FEATURE_SERVICE_BASE_URL") ?: "http://127.0.0.1:8082",
                 backendBaseUrl = System.getenv("BACKEND_BASE_URL") ?: "http://127.0.0.1:8081",

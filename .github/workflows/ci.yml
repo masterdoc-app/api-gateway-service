@@ -49,10 +49,10 @@ jobs:
             if [ ! -f /etc/masterdoc-api-gateway/.env ]; then
               printf '%s\n' \
                 'PORT=8083' \
-                'ZITADEL_ISSUER=https://auth.formaverse.ru' \
-                'ZITADEL_JWK_SET_URI=https://auth.formaverse.ru/oauth/v2/keys' \
-                'FEATURE_SERVICE_BASE_URL=http://127.0.0.1:8082' \
-                'BACKEND_BASE_URL=http://127.0.0.1:8081' \
+                'ZITADEL_ISSUER=https://auth.fixaverse.ru' \
+                'ZITADEL_JWK_SET_URI=https://auth.fixaverse.ru/oauth/v2/keys' \
+                'FEATURE_SERVICE_BASE_URL=http://host.docker.internal:8082' \
+                'BACKEND_BASE_URL=http://host.docker.internal:8081' \
                 'CORS_ORIGINS=https://copilot.formaverse.ru,https://copilot.masterdoc.pro,http://localhost:8080' \
                 > /etc/masterdoc-api-gateway/.env
               chmod 600 /etc/masterdoc-api-gateway/.env

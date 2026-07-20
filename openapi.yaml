@@ -50,7 +50,7 @@ paths:
       summary: Exchange authorization code or refresh_token for tokens (BFF → Zitadel)
       description: |
         Проксирует тело как есть на Zitadel `POST /oauth/v2/token`.
-        Клиент **не** ходит на auth.formaverse.ru за токенами — только сюда.
+        Клиент **не** ходит на auth.fixaverse.ru за токенами — только сюда.
 
         `grant_type=authorization_code` — после callback с `code`.
         `grant_type=refresh_token` — обновить access_token.
@@ -185,7 +185,7 @@ components:
         authUrl:
           type: string
           format: uri
-          example: https://auth.formaverse.ru/oauth/v2/authorize
+          example: https://auth.fixaverse.ru/oauth/v2/authorize
 
     TokenResponse:
       type: object
