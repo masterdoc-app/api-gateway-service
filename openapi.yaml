@@ -4,11 +4,12 @@ info:
   version: 0.1.0
   description: |
     Single public API base for clients: `https://api.masterdoc.pro`.
+    REST-клиент знает только этот host (см. docs/AUTH.md).
 
-    - `GET /auth/url` — OIDC authorize URL (no auth; first call for clients)
-    - `GET /me` — userInfo + features (proxied to feature-service; requires Zitadel JWT)
-    - `/v1/*` — passthrough to Onyx backend (chat, assistants, reports, …)
-    - Login UI itself is Zitadel; clients open `authUrl` from `/auth/url`
+    - `GET /auth/url` — куда открыть браузер для логина (страница Zitadel)
+    - `POST /auth/token` — обмен code / refresh на токены (BFF → Zitadel)
+    - `GET /me` — userInfo + features (нужен Bearer JWT)
+    - `/v1/*` — proxy в backend
 
 servers:
   - url: https://api.masterdoc.pro
@@ -42,6 +43,69 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AuthUrlResponse"
+
+  /auth/token:
+    post:
+      operationId: postAuthToken
+      summary: Exchange authorization code or refresh_token for tokens (BFF → Zitadel)
+      description: |
+        Проксирует тело как есть на Zitadel `POST /oauth/v2/token`.
+        Клиент **не** ходит на auth.formaverse.ru за токенами — только сюда.
+
+        `grant_type=authorization_code` — после callback с `code`.
+        `grant_type=refresh_token` — обновить access_token.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [grant_type, client_id]
+              properties:
+                grant_type:
+                  type: string
+                  enum: [authorization_code, refresh_token]
+                client_id:
+                  type: string
+                code:
+                  type: string
+                  description: Required when grant_type=authorization_code
+                redirect_uri:
+                  type: string
+                  description: Same redirect_uri as in authorize (authorization_code)
+                code_verifier:
+                  type: string
+                  description: PKCE verifier (authorization_code)
+                refresh_token:
+                  type: string
+                  description: Required when grant_type=refresh_token
+            examples:
+              authorizationCode:
+                summary: Exchange code
+                value:
+                  grant_type: authorization_code
+                  code: "...."
+                  redirect_uri: masterdoc://auth/callback
+                  client_id: native-app-id
+                  code_verifier: "...."
+              refresh:
+                summary: Refresh access token
+                value:
+                  grant_type: refresh_token
+                  refresh_token: "...."
+                  client_id: native-app-id
+      responses:
+        "200":
+          description: Token response from Zitadel
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+        "400":
+          description: Upstream OAuth error (invalid_grant, …) — body as from Zitadel
+        "502":
+          description: Zitadel unavailable
 
   /me:
     get:
@@ -122,6 +186,23 @@ components:
           type: string
           format: uri
           example: https://auth.formaverse.ru/oauth/v2/authorize
+
+    TokenResponse:
+      type: object
+      required: [access_token, token_type]
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        id_token:
+          type: string
+        token_type:
+          type: string
+          example: Bearer
+        expires_in:
+          type: integer
+          example: 43200
 
     UserInfo:
       type: object
