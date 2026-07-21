@@ -81,10 +81,11 @@ class HttpZitadelAdminClient(
                 putJsonObject("profile") {
                     put("givenName", request.givenName)
                     put("familyName", request.familyName)
+                    put("preferredLanguage", "ru")
                 }
                 putJsonObject("email") {
                     put("email", request.email)
-                    putJsonObject("sendCode") {}
+                    put("isVerified", false)
                 }
             }
         val createResponse = postJson("$baseUrl/v2/users/human", createBody.toString())
@@ -102,6 +103,15 @@ class HttpZitadelAdminClient(
         val userId =
             created.userId?.takeIf { it.isNotBlank() }
                 ?: throw ZitadelAdminException.Upstream("zitadel create user response missing userId")
+
+        val inviteBody =
+            buildJsonObject {
+                putJsonObject("sendCode") {
+                    put("applicationName", "Fixaverse")
+                }
+            }
+        val inviteResponse = postJson("$baseUrl/v2/users/$userId/invite_code", inviteBody.toString())
+        ensureSuccess(inviteResponse)
 
         val grantResponse =
             postJson(
@@ -166,7 +176,9 @@ class HttpZitadelAdminClient(
         }
         val body =
             buildJsonObject {
-                putJsonObject("sendCode") {}
+                putJsonObject("sendCode") {
+                    put("applicationName", "Fixaverse")
+                }
             }
         val inviteResponse = postJson("$baseUrl/v2/users/$userId/invite_code", body.toString())
         ensureSuccess(inviteResponse)
