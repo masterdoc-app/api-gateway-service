@@ -25,7 +25,7 @@ interface ZitadelAdminClient {
 
     suspend fun listUsers(limit: Int, offset: Int): AdminUserList
 
-    suspend fun setRoles(userId: String, roles: List<String>): AdminUser
+    suspend fun setFeatures(userId: String, features: List<String>): AdminUser
 
     suspend fun resendInvite(userId: String)
 
@@ -39,7 +39,7 @@ interface ZitadelAdminClient {
 
                 override suspend fun listUsers(limit: Int, offset: Int): AdminUserList = fail()
 
-                override suspend fun setRoles(userId: String, roles: List<String>): AdminUser = fail()
+                override suspend fun setFeatures(userId: String, features: List<String>): AdminUser = fail()
 
                 override suspend fun resendInvite(userId: String) = fail()
             }
@@ -62,7 +62,7 @@ interface ZitadelAdminClient {
 
                 override suspend fun listUsers(limit: Int, offset: Int): AdminUserList = fail()
 
-                override suspend fun setRoles(userId: String, roles: List<String>): AdminUser = fail()
+                override suspend fun setFeatures(userId: String, features: List<String>): AdminUser = fail()
 
                 override suspend fun resendInvite(userId: String) = fail()
             }
@@ -116,7 +116,7 @@ class HttpZitadelAdminClient(
         val grantResponse =
             postJson(
                 "$baseUrl/management/v1/users/$userId/grants",
-                json.encodeToString(ZitadelCreateGrantRequest.serializer(), ZitadelCreateGrantRequest(config.zitadelProjectId, request.roles)),
+                json.encodeToString(ZitadelCreateGrantRequest.serializer(), ZitadelCreateGrantRequest(config.zitadelProjectId, request.features)),
             )
         ensureSuccess(grantResponse)
 
@@ -142,27 +142,27 @@ class HttpZitadelAdminClient(
 
         val items =
             usersSearch.result.map { user ->
-                val roles = grantsByUserId[user.id.orEmpty()].orEmpty()
-                ZitadelAdminMapping.toAdminUser(user, roles, includeInviteSent = false)
+                val features = grantsByUserId[user.id.orEmpty()].orEmpty()
+                ZitadelAdminMapping.toAdminUser(user, features, includeInviteSent = false)
             }
         val total = usersSearch.details?.totalResult?.toInt() ?: items.size
         return AdminUserList(items = items, total = total)
     }
 
-    override suspend fun setRoles(userId: String, roles: List<String>): AdminUser {
+    override suspend fun setFeatures(userId: String, features: List<String>): AdminUser {
         val grant = findUserGrant(userId)
         if (grant?.id != null) {
             val updateResponse =
                 putJson(
                     "$baseUrl/management/v1/users/$userId/grants/${grant.id}",
-                    json.encodeToString(ZitadelUpdateGrantRequest.serializer(), ZitadelUpdateGrantRequest(roles)),
+                    json.encodeToString(ZitadelUpdateGrantRequest.serializer(), ZitadelUpdateGrantRequest(features)),
                 )
             ensureSuccess(updateResponse)
         } else {
             val createResponse =
                 postJson(
                     "$baseUrl/management/v1/users/$userId/grants",
-                    json.encodeToString(ZitadelCreateGrantRequest.serializer(), ZitadelCreateGrantRequest(config.zitadelProjectId, roles)),
+                    json.encodeToString(ZitadelCreateGrantRequest.serializer(), ZitadelCreateGrantRequest(config.zitadelProjectId, features)),
                 )
             ensureSuccess(createResponse)
         }
@@ -191,7 +191,7 @@ class HttpZitadelAdminClient(
         val grant = findUserGrant(userId)
         return ZitadelAdminMapping.toAdminUser(
             user = user,
-            roles = grant?.roleKeys.orEmpty(),
+            features = grant?.roleKeys.orEmpty(),
             includeInviteSent = includeInviteSent,
         )
     }
@@ -412,7 +412,7 @@ class FakeZitadelAdminClient : ZitadelAdminClient {
                 email = request.email,
                 givenName = request.givenName,
                 familyName = request.familyName,
-                roles = request.roles.toMutableList(),
+                features = request.features.toMutableList(),
                 state = "invited",
                 inviteSent = true,
             )
@@ -427,12 +427,12 @@ class FakeZitadelAdminClient : ZitadelAdminClient {
         return AdminUserList(items = items, total = all.size)
     }
 
-    override suspend fun setRoles(userId: String, roles: List<String>): AdminUser {
+    override suspend fun setFeatures(userId: String, features: List<String>): AdminUser {
         val user =
             usersById[userId]
                 ?: throw ZitadelAdminException.NotFound("user not found")
-        user.roles.clear()
-        user.roles.addAll(roles)
+        user.features.clear()
+        user.features.addAll(features)
         return user.toAdminUser(includeInviteSent = false)
     }
 
@@ -454,7 +454,7 @@ class FakeZitadelAdminClient : ZitadelAdminClient {
                 email = user.email,
                 givenName = user.givenName,
                 familyName = user.familyName,
-                roles = user.roles.toMutableList(),
+                features = user.features.toMutableList(),
                 state = user.state,
                 inviteSent = user.inviteSent ?: false,
             )
@@ -473,7 +473,7 @@ class FakeZitadelAdminClient : ZitadelAdminClient {
         val email: String,
         val givenName: String,
         val familyName: String,
-        val roles: MutableList<String>,
+        val features: MutableList<String>,
         var state: String,
         var inviteSent: Boolean,
     ) {
@@ -483,7 +483,7 @@ class FakeZitadelAdminClient : ZitadelAdminClient {
                 email = email,
                 givenName = givenName,
                 familyName = familyName,
-                roles = roles.toList(),
+                features = features.toList(),
                 state = state,
                 inviteSent = inviteSent.takeIf { includeInviteSent },
             )

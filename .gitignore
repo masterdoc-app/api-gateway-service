@@ -5,3 +5,6 @@ out/
 .idea/
 .env
 *.log
+
+bin/
+local.properties

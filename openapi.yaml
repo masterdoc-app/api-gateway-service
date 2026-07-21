@@ -129,10 +129,10 @@ paths:
   /admin/users/invites:
     post:
       operationId: postAdminUserInvite
-      summary: Invite a user and assign product roles
+      summary: Invite a user and assign product features
       description: |
-        Creates a human user in Zitadel (invitation email) and assigns project role grants.
-        Caller must have feature `user_invite` (typically via `admin` role in feature-service).
+        Creates a human user in Zitadel (invitation email) and assigns project feature grants.
+        Caller must have feature `user_invite`.
       security:
         - bearerAuth: []
       requestBody:
@@ -145,7 +145,7 @@ paths:
               email: ivan@company.ru
               givenName: Ivan
               familyName: Petrov
-              roles: [technologist]
+              features: [charts, equipment]
       responses:
         "201":
           description: User created and invite sent (when IdP accepts email send)
@@ -154,7 +154,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/AdminUser"
         "400":
-          description: Validation error or unknown role (plain text)
+          description: Validation error or unknown feature (plain text)
         "401":
           description: Missing or invalid JWT
         "403":
@@ -198,10 +198,10 @@ paths:
         "502":
           description: Zitadel Management API unavailable
 
-  /admin/users/{id}/roles:
+  /admin/users/{id}/features:
     put:
-      operationId: putAdminUserRoles
-      summary: Replace a user's project role grants
+      operationId: putAdminUserFeatures
+      summary: Replace a user's feature grants
       security:
         - bearerAuth: []
       parameters:
@@ -216,9 +216,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SetRolesRequest"
+              $ref: "#/components/schemas/SetFeaturesRequest"
             example:
-              roles: [technologist, reporter]
+              features: [charts, equipment]
       responses:
         "200":
           description: Updated user
@@ -227,7 +227,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/AdminUser"
         "400":
-          description: Empty roles or unknown role (plain text)
+          description: Empty features or unknown feature (plain text)
         "401":
           description: Missing or invalid JWT
         "403":
@@ -345,7 +345,7 @@ components:
 
     UserInfo:
       type: object
-      required: [id, roles]
+      required: [id]
       properties:
         id:
           type: string
@@ -355,10 +355,6 @@ components:
           type: string
         email:
           type: string
-        roles:
-          type: array
-          items:
-            type: string
 
     MeResponse:
       type: object
@@ -374,7 +370,7 @@ components:
 
     InviteUserRequest:
       type: object
-      required: [email, givenName, familyName, roles]
+      required: [email, givenName, familyName, features]
       properties:
         email:
           type: string
@@ -383,27 +379,27 @@ components:
           type: string
         familyName:
           type: string
-        roles:
+        features:
           type: array
           minItems: 1
           items:
             type: string
-            enum: [admin, dispatcher, engineer, requester, reporter, technologist]
+            enum: [board, copilot, charts, equipment, user_invite]
 
-    SetRolesRequest:
+    SetFeaturesRequest:
       type: object
-      required: [roles]
+      required: [features]
       properties:
-        roles:
+        features:
           type: array
           minItems: 1
           items:
             type: string
-            enum: [admin, dispatcher, engineer, requester, reporter, technologist]
+            enum: [board, copilot, charts, equipment, user_invite]
 
     AdminUser:
       type: object
-      required: [id, email, givenName, familyName, roles, state]
+      required: [id, email, givenName, familyName, features, state]
       properties:
         id:
           type: string
@@ -415,10 +411,11 @@ components:
           type: string
         familyName:
           type: string
-        roles:
+        features:
           type: array
           items:
             type: string
+            enum: [board, copilot, charts, equipment, user_invite]
         state:
           type: string
           enum: [invited, active, inactive]

@@ -16,7 +16,7 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
         post("/admin/users/invites") {
             if (!call.requireUserInvite(deps)) return@post
             val request = call.receive<InviteUserRequest>()
-            ProductRoles.validate(request.roles)?.let { error ->
+            ProductFeatures.validate(request.features)?.let { error ->
                 call.respondText(error, status = HttpStatusCode.BadRequest)
                 return@post
             }
@@ -44,19 +44,19 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
             }
         }
 
-        put("/admin/users/{id}/roles") {
+        put("/admin/users/{id}/features") {
             if (!call.requireUserInvite(deps)) return@put
             val userId = call.parameters["id"] ?: run {
                 call.respondText("Bad Request", status = HttpStatusCode.BadRequest)
                 return@put
             }
-            val request = call.receive<SetRolesRequest>()
-            ProductRoles.validate(request.roles)?.let { error ->
+            val request = call.receive<SetFeaturesRequest>()
+            ProductFeatures.validate(request.features)?.let { error ->
                 call.respondText(error, status = HttpStatusCode.BadRequest)
                 return@put
             }
             try {
-                val user = deps.zitadelAdminClient.setRoles(userId, request.roles)
+                val user = deps.zitadelAdminClient.setFeatures(userId, request.features)
                 call.respond(user)
             } catch (e: ZitadelAdminException) {
                 call.respondZitadelAdminException(e)
