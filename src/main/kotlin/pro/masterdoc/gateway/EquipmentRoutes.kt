@@ -10,6 +10,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.ByteArrayContent
 import io.ktor.server.application.Application
 import io.ktor.server.application.call
 import io.ktor.server.request.header
@@ -72,8 +73,14 @@ private suspend fun forward(
             client.request("$baseUrl$uri") {
                 this.method = method
                 header("X-Org-Id", orgId)
-                call.request.header(HttpHeaders.ContentType)?.let { header(HttpHeaders.ContentType, it) }
-                if (bodyBytes != null) setBody(bodyBytes)
+                call.request.header("X-User-Id")?.let { header("X-User-Id", it) }
+                if (bodyBytes != null) {
+                    val contentTypeHeader = call.request.header(HttpHeaders.ContentType)
+                    val contentType =
+                        contentTypeHeader?.let { runCatching { ContentType.parse(it) }.getOrNull() }
+                            ?: ContentType.Application.OctetStream
+                    setBody(ByteArrayContent(bodyBytes, contentType))
+                }
             }
         val contentType =
             upstream.headers[HttpHeaders.ContentType]?.let { ContentType.parse(it) }
