@@ -43,6 +43,10 @@ class AdminUserRoutesTest {
         override suspend fun resendInvite(userId: String) {
             seenOrgIds += TenantContext.requireOrgId()
         }
+
+        override suspend fun deleteUser(userId: String) {
+            seenOrgIds += TenantContext.requireOrgId()
+        }
     }
 
     private fun featureClientWith(vararg features: String): FeatureServiceClient =

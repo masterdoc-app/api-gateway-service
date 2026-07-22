@@ -3,6 +3,7 @@ package pro.masterdoc.gateway
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.delete
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.put
@@ -33,6 +34,8 @@ interface ZitadelAdminClient {
 
     suspend fun resendInvite(userId: String)
 
+    suspend fun deleteUser(userId: String)
+
     companion object {
         fun unconfigured(): ZitadelAdminClient =
             object : ZitadelAdminClient {
@@ -46,6 +49,8 @@ interface ZitadelAdminClient {
                 override suspend fun setRoles(userId: String, roles: List<String>): AdminUser = fail()
 
                 override suspend fun resendInvite(userId: String) = fail()
+
+                override suspend fun deleteUser(userId: String) = fail()
             }
 
         fun http(config: GatewayConfig): ZitadelAdminClient {
@@ -66,6 +71,8 @@ interface ZitadelAdminClient {
                 override suspend fun setRoles(userId: String, roles: List<String>): AdminUser = fail()
 
                 override suspend fun resendInvite(userId: String) = fail()
+
+                override suspend fun deleteUser(userId: String) = fail()
             }
     }
 }
@@ -171,6 +178,15 @@ class HttpZitadelAdminClient(
             }
         val inviteResponse = postJson("$baseUrl/v2/users/$userId/invite_code", body.toString())
         ensureSuccess(inviteResponse)
+    }
+
+    override suspend fun deleteUser(userId: String) {
+        val user = findUser(userId) ?: throw ZitadelAdminException.NotFound("user not found")
+        if (UserStateMapper.fromZitadel(user.state, user.human?.email?.isEmailVerified) != "invited") {
+            throw ZitadelAdminException.Conflict("only invited users can be revoked")
+        }
+        val response = deleteJson("$baseUrl/v2/users/$userId")
+        ensureSuccess(response)
     }
 
     private suspend fun fetchUser(userId: String, includeInviteSent: Boolean): AdminUser {
@@ -297,6 +313,20 @@ class HttpZitadelAdminClient(
                     header(HttpHeaders.ContentType, "application/json")
                     header(HttpHeaders.Accept, "application/json")
                     setBody(body)
+                }
+            HttpTextResponse(response.status, response.bodyAsText())
+        } catch (e: ZitadelAdminException) {
+            throw e
+        } catch (e: Exception) {
+            throw ZitadelAdminException.Upstream("zitadel admin request failed: ${e.message}")
+        }
+
+    private suspend fun deleteJson(url: String): HttpTextResponse =
+        try {
+            val response =
+                client.delete(url) {
+                    applyAuthHeaders()
+                    header(HttpHeaders.Accept, "application/json")
                 }
             HttpTextResponse(response.status, response.bodyAsText())
         } catch (e: ZitadelAdminException) {
@@ -433,6 +463,15 @@ class FakeZitadelAdminClient : ZitadelAdminClient {
             throw ZitadelAdminException.Conflict("user is already active")
         }
         user.inviteSent = true
+    }
+
+    override suspend fun deleteUser(userId: String) {
+        val user = usersById[userId] ?: throw ZitadelAdminException.NotFound("user not found")
+        if (user.state != "invited") {
+            throw ZitadelAdminException.Conflict("only invited users can be revoked")
+        }
+        usersById.remove(userId)
+        idByEmail.remove(user.email.lowercase())
     }
 
     fun seed(user: AdminUser) {
