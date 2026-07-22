@@ -5,6 +5,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.request.header
 import io.ktor.server.response.respondText
+import io.ktor.util.AttributeKey
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -51,5 +52,49 @@ suspend fun ApplicationCall.requireUserInvite(deps: GatewayDeps): Boolean {
         respondText("Forbidden", status = HttpStatusCode.Forbidden)
         return false
     }
+    return true
+}
+
+
+val OrgIdKey = AttributeKey<String>("orgId")
+val AuthHeaderKey = AttributeKey<String>("authHeader")
+
+suspend fun ApplicationCall.requireFeature(deps: GatewayDeps, feature: String): Boolean {
+    val authorization = request.header(HttpHeaders.Authorization)
+    if (authorization.isNullOrBlank() || !authorization.startsWith("Bearer ")) {
+        respondText("Unauthorized", status = HttpStatusCode.Unauthorized)
+        return false
+    }
+    val token = authorization.removePrefix("Bearer ").trim()
+    if (token.isEmpty() || deps.tokenValidator.validate(token) == null) {
+        respondText("Unauthorized", status = HttpStatusCode.Unauthorized)
+        return false
+    }
+    val upstream =
+        try {
+            deps.featureClient.getMe(authorization)
+        } catch (_: UpstreamUnavailableException) {
+            respondText("Bad Gateway", status = HttpStatusCode.BadGateway)
+            return false
+        }
+    if (upstream.status != HttpStatusCode.OK) {
+        respondText("Bad Gateway", status = HttpStatusCode.BadGateway)
+        return false
+    }
+    val features =
+        runCatching {
+            adminAuthJson
+                .parseToJsonElement(String(upstream.body))
+                .jsonObject["features"]
+                ?.jsonArray
+                ?.map { it.jsonPrimitive.content }
+                ?: emptyList()
+        }.getOrDefault(emptyList())
+    if (feature !in features) {
+        respondText("Forbidden", status = HttpStatusCode.Forbidden)
+        return false
+    }
+    attributes.put(OrgIdKey, "default-org")
+    attributes.put(AuthHeaderKey, authorization)
     return true
 }
