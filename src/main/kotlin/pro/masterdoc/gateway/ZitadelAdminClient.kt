@@ -198,7 +198,7 @@ class HttpZitadelAdminClient(
         if (UserStateMapper.fromZitadel(user.state, user.human?.email?.isEmailVerified) != "invited") {
             throw ZitadelAdminException.Conflict("only invited users can be revoked")
         }
-        val response = deleteJson("$baseUrl/v2/users/$userId")
+        val response = deleteJson("$baseUrl/management/v1/users/$userId")
         ensureSuccess(response)
     }
 
