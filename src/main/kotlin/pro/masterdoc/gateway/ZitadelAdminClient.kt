@@ -20,6 +20,10 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 
+internal object ZitadelAdminOrgHeader {
+    fun resolve(): String = TenantContext.requireOrgId()
+}
+
 interface ZitadelAdminClient {
     suspend fun inviteUser(request: InviteUserRequest): AdminUser
 
@@ -47,9 +51,6 @@ interface ZitadelAdminClient {
         fun http(config: GatewayConfig): ZitadelAdminClient {
             if (config.zitadelMgmtToken.isBlank()) {
                 return notConfiguredClient("ZITADEL_MGMT_TOKEN not set")
-            }
-            if (config.zitadelOrgId.isBlank()) {
-                return notConfiguredClient("ZITADEL_ORG_ID not set")
             }
             return HttpZitadelAdminClient(config)
         }
@@ -317,7 +318,7 @@ class HttpZitadelAdminClient(
 
     private fun io.ktor.client.request.HttpRequestBuilder.applyAuthHeaders() {
         header(HttpHeaders.Authorization, "Bearer ${config.zitadelMgmtToken}")
-        header("x-zitadel-orgid", config.zitadelOrgId)
+        header("x-zitadel-orgid", ZitadelAdminOrgHeader.resolve())
     }
 
     private inline fun <T> decodeResponse(body: String, decode: () -> T): T =

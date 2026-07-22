@@ -4,7 +4,6 @@ data class GatewayConfig(
     val port: Int,
     val zitadelIssuer: String,
     val zitadelJwkSetUri: String,
-    val zitadelOrgId: String,
     val zitadelProjectId: String,
     val zitadelMgmtToken: String,
     val featureServiceBaseUrl: String,
@@ -19,7 +18,6 @@ data class GatewayConfig(
                 zitadelJwkSetUri =
                     System.getenv("ZITADEL_JWK_SET_URI")
                         ?: "https://auth.fixaverse.ru/oauth/v2/keys",
-                zitadelOrgId = System.getenv("ZITADEL_ORG_ID") ?: "",
                 zitadelProjectId = System.getenv("ZITADEL_PROJECT_ID") ?: "",
                 zitadelMgmtToken = System.getenv("ZITADEL_MGMT_TOKEN") ?: "",
                 featureServiceBaseUrl =
@@ -37,7 +35,6 @@ data class GatewayConfig(
                 port = 0,
                 zitadelIssuer = "https://auth.test",
                 zitadelJwkSetUri = "https://auth.test/keys",
-                zitadelOrgId = "",
                 zitadelProjectId = "",
                 zitadelMgmtToken = "",
                 featureServiceBaseUrl = "http://feature.test",

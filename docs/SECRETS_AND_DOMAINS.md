@@ -26,7 +26,6 @@ Do **not** expose `feature-service:8082` or `backend:8081` publicly.
 PORT=8083
 ZITADEL_ISSUER=https://auth.fixaverse.ru
 ZITADEL_JWK_SET_URI=https://auth.fixaverse.ru/oauth/v2/keys
-ZITADEL_ORG_ID=<zitadel-org-id>
 ZITADEL_PROJECT_ID=<masterdoc-toir-project-id>
 ZITADEL_MGMT_TOKEN=<pat-with-user-and-grant-management>
 FEATURE_SERVICE_BASE_URL=http://127.0.0.1:8082
@@ -42,9 +41,10 @@ Green slot uses `PORT=8084` via compose.
 
 | Variable | Purpose |
 |----------|---------|
-| `ZITADEL_ORG_ID` | Org where users are created and listed |
 | `ZITADEL_PROJECT_ID` | Project for role grants (e.g. `masterdoc-toir`) |
-| `ZITADEL_MGMT_TOKEN` | Personal access token (PAT) with rights to manage users and grants in that org |
+| `ZITADEL_MGMT_TOKEN` | Personal access token (PAT) with rights to manage users and grants in client orgs |
+
+Admin org scoping comes from the JWT claim `urn:zitadel:iam:org:id` (ambient `TenantContext`), not from gateway env. Platform `ZITADEL_ORG_ID` remains for **`masterdoc-zitadel` Terraform only**; the PAT must be allowed to manage users and grants **across client orgs**.
 
 - PAT is **server-only** — never ship to browser, mobile, or admin SPA bundles.
 - Prefer a **dedicated machine user** service account with minimal IAM; do not reuse a human admin password.
@@ -58,11 +58,10 @@ Green slot uses `PORT=8084` via compose.
 | `DEPLOY_SSH_PRIVATE_KEY` | SSH to VPS |
 | `DEPLOY_USER` | SSH user |
 | `DEPLOY_HOST` | VPS host |
-| `ZITADEL_ORG_ID` | Org for Management API user ops (synced to VPS `.env`) |
 | `ZITADEL_PROJECT_ID` | Project for role grants, e.g. `382623622436487171` (masterdoc-toir) |
 | `ZITADEL_MGMT_TOKEN` | PAT with user/grant management (prefer `terraform-masterdoc` / repo secret `ZITADEL_TOKEN` in masterdoc-zitadel over bootstrap `login-client.pat`) |
 
-Env file on VPS is not committed. Deploy job upserts the three `ZITADEL_*` admin vars when secrets are set.
+Env file on VPS is not committed. Deploy job upserts the two `ZITADEL_*` admin vars when secrets are set.
 
 ## Cutover checklist (nginx)
 
