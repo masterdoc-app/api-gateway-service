@@ -61,6 +61,10 @@ jobs:
               'ZITADEL_MGMT_TOKEN=' \
               'FEATURE_SERVICE_BASE_URL=http://host.docker.internal:8082' \
               'BACKEND_BASE_URL=http://host.docker.internal:8081' \
+              'CATALOG_SERVICE_BASE_URL=http://host.docker.internal:8091' \
+              'DASHBOARD_SERVICE_BASE_URL=http://host.docker.internal:8092' \
+              'DOCUMENT_SERVICE_BASE_URL=http://host.docker.internal:8093' \
+              'TECHNOLOGIST_SERVICE_BASE_URL=http://host.docker.internal:8095' \
               'CORS_ORIGINS=https://app.fixaverse.ru,https://copilot.fixaverse.ru,https://copilot.formaverse.ru,https://copilot.masterdoc.pro,http://localhost:8080' \
               > /etc/masterdoc-api-gateway/.env
             chmod 600 /etc/masterdoc-api-gateway/.env
