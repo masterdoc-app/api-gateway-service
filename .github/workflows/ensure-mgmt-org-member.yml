@@ -1,0 +1,45 @@
+name: Ensure Mgmt PAT Org Member
+
+on:
+  workflow_dispatch:
+    inputs:
+      extra_org_ids:
+        description: Space-separated client org ids
+        required: true
+        default: "382715225649971203"
+      roles:
+        description: Org member roles for ZITADEL_MGMT_TOKEN user
+        required: true
+        default: ORG_OWNER
+
+concurrency:
+  group: ensure-mgmt-org-member-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  ensure:
+    name: Grant org roles to gateway PAT
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify secrets
+        env:
+          TOKEN: ${{ secrets.ZITADEL_MGMT_TOKEN }}
+        run: |
+          test -n "$TOKEN" || { echo "Add secret ZITADEL_MGMT_TOKEN"; exit 1; }
+
+      - name: Ensure org membership for gateway PAT
+        env:
+          ZITADEL_DOMAIN: auth.fixaverse.ru
+          ZITADEL_TOKEN: ${{ secrets.ZITADEL_MGMT_TOKEN }}
+          EXTRA_ORG_IDS: ${{ inputs.extra_org_ids }}
+          MGMT_ORG_ROLES: ${{ inputs.roles }}
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/ensure-mgmt-org-member.sh \
+            https://raw.githubusercontent.com/masterdoc-app/masterdoc-zitadel/master/scripts/ensure-mgmt-org-member.sh
+          chmod +x /tmp/ensure-mgmt-org-member.sh
+          /tmp/ensure-mgmt-org-member.sh | tee /tmp/mgmt-member-out.txt
