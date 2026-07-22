@@ -28,6 +28,10 @@ suspend fun ApplicationCall.requireUserInvite(deps: GatewayDeps): ValidatedToken
         respondText("Unauthorized", status = HttpStatusCode.Unauthorized)
         return null
     }
+    if (validated.orgId.isNullOrBlank()) {
+        respondText("Unauthorized", status = HttpStatusCode.Unauthorized)
+        return null
+    }
     val upstream =
         try {
             deps.featureClient.getMe(authorization)

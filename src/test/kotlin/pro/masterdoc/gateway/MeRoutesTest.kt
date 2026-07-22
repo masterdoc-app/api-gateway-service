@@ -59,6 +59,31 @@ class MeRoutesTest {
     }
 
     @Test
+    fun `GET me with valid token without org claim proxies feature-service body`() = testApplication {
+        val upstreamJson =
+            """{"userInfo":{"id":"u1","givenName":"Ivan","familyName":"Petrov","email":"i@e.com","roles":["dispatcher"]},"features":["board"]}"""
+        application {
+            module(
+                GatewayConfig.testDefaults(),
+                GatewayDeps(
+                    featureClient =
+                        FeatureServiceClient { auth ->
+                            assertEquals("Bearer good-token", auth)
+                            UpstreamResult(HttpStatusCode.OK, "application/json", upstreamJson.toByteArray())
+                        },
+                    backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
+                    tokenValidator = TokenValidator.acceptingWithoutOrg(),
+                ),
+            )
+        }
+        val response =
+            client.get("/me") {
+                header(HttpHeaders.Authorization, "Bearer good-token")
+            }
+        assertEquals(HttpStatusCode.OK, response.status)
+    }
+
+    @Test
     fun `GET me returns 502 when feature-service unavailable`() = testApplication {
         application {
             module(

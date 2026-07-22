@@ -31,8 +31,9 @@ class JwksTokenValidator(
                     .verify(bearerToken)
             val subject = verified.subject?.takeIf { it.isNotBlank() } ?: return null
             val org =
-                verified.getClaim(OrgClaimExtractor.ORG_ID_CLAIM).asString()?.trim()?.takeIf { it.isNotEmpty() }
-                    ?: return null
+                OrgClaimExtractor.orgIdFrom(
+                    mapOf(OrgClaimExtractor.ORG_ID_CLAIM to verified.getClaim(OrgClaimExtractor.ORG_ID_CLAIM).asString()),
+                )
             ValidatedToken(subject = subject, orgId = org)
         } catch (_: JWTVerificationException) {
             null

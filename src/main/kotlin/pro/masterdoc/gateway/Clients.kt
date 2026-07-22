@@ -91,7 +91,7 @@ class HttpBackendProxyClient(
 }
 
 fun interface TokenValidator {
-    /** Valid token with subject + org; null if invalid / missing org claim. */
+    /** Valid token with subject; orgId may be null (allowed for /me, rejected on admin paths). */
     suspend fun validate(bearerToken: String): ValidatedToken?
 
     companion object {
@@ -102,6 +102,9 @@ fun interface TokenValidator {
             subject: String = "test-sub",
             orgId: String = "test-org",
         ): TokenValidator = TokenValidator { ValidatedToken(subject, orgId) }
+
+        fun acceptingWithoutOrg(subject: String = "test-sub"): TokenValidator =
+            TokenValidator { ValidatedToken(subject, orgId = null) }
 
         fun rejecting(): TokenValidator = TokenValidator { null }
     }

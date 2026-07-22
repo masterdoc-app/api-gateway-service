@@ -1,5 +1,8 @@
 package pro.masterdoc.gateway
 
+import kotlinx.coroutines.asContextElement
+import kotlinx.coroutines.withContext
+
 object TenantContext {
     private val orgId = ThreadLocal<String?>()
 
@@ -10,12 +13,8 @@ object TenantContext {
 
     suspend fun <T> withTenant(orgIdValue: String, block: suspend () -> T): T {
         require(orgIdValue.isNotBlank()) { "orgId must not be blank" }
-        val previous = orgId.get()
-        orgId.set(orgIdValue)
-        return try {
+        return withContext(orgId.asContextElement(orgIdValue)) {
             block()
-        } finally {
-            if (previous == null) orgId.remove() else orgId.set(previous)
         }
     }
 }

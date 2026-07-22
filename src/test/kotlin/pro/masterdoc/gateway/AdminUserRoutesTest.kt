@@ -281,17 +281,50 @@ class AdminUserRoutesTest {
                 GatewayConfig.testDefaults(),
                 testDeps(
                     featureClientWith("user_invite"),
-                    tokenValidator = TokenValidator.rejecting(),
+                    tokenValidator = TokenValidator.acceptingWithoutOrg(),
                 ),
             )
         }
         val response =
             client.post("/admin/users/invites") {
-                header(HttpHeaders.Authorization, "Bearer bad")
+                header(HttpHeaders.Authorization, "Bearer good-token")
                 header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
                 setBody("""{"email":"a@b.com","givenName":"A","familyName":"B","roles":["admin"]}""")
             }
         assertEquals(HttpStatusCode.Unauthorized, response.status)
+    }
+
+    @Test
+    fun `admin routes scope org A vs org B without bleed`() = testApplication {
+        val recording = RecordingOrgAdminClient()
+        application {
+            module(
+                GatewayConfig.testDefaults(),
+                testDeps(
+                    featureClientWith("user_invite"),
+                    zitadelAdminClient = recording,
+                    tokenValidator =
+                        TokenValidator { token ->
+                            when (token) {
+                                "token-org-a" -> ValidatedToken("sub-a", "org-a")
+                                "token-org-b" -> ValidatedToken("sub-b", "org-b")
+                                else -> null
+                            }
+                        },
+                ),
+            )
+        }
+        val inviteBody =
+            """{"email":"ivan@company.ru","givenName":"Ivan","familyName":"Petrov","roles":["technologist"]}"""
+        client.post("/admin/users/invites") {
+            header(HttpHeaders.Authorization, "Bearer token-org-a")
+            header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            setBody(inviteBody)
+        }
+        client.get("/admin/users") {
+            header(HttpHeaders.Authorization, "Bearer token-org-b")
+        }
+        assertEquals(listOf("org-a", "org-b"), recording.seenOrgIds)
     }
 
     @Test

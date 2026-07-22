@@ -16,13 +16,14 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
     routing {
         post("/admin/users/invites") {
             val validated = call.requireUserInvite(deps) ?: return@post
+            val orgId = validated.orgId!!
             val request = call.receive<InviteUserRequest>()
             ProductRoles.validate(request.roles)?.let { error ->
                 call.respondText(error, status = HttpStatusCode.BadRequest)
                 return@post
             }
             try {
-                TenantContext.withTenant(validated.orgId) {
+                TenantContext.withTenant(orgId) {
                     val user = deps.zitadelAdminClient.inviteUser(request)
                     call.respond(HttpStatusCode.Created, user)
                 }
@@ -35,10 +36,11 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
 
         get("/admin/users") {
             val validated = call.requireUserInvite(deps) ?: return@get
+            val orgId = validated.orgId!!
             val limit = call.request.queryParameters["limit"]?.toIntOrNull()?.coerceIn(1, 100) ?: 50
             val offset = call.request.queryParameters["offset"]?.toIntOrNull()?.coerceAtLeast(0) ?: 0
             try {
-                TenantContext.withTenant(validated.orgId) {
+                TenantContext.withTenant(orgId) {
                     val list = deps.zitadelAdminClient.listUsers(limit, offset)
                     call.respond(list)
                 }
@@ -51,6 +53,7 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
 
         put("/admin/users/{id}/roles") {
             val validated = call.requireUserInvite(deps) ?: return@put
+            val orgId = validated.orgId!!
             val userId = call.parameters["id"] ?: run {
                 call.respondText("Bad Request", status = HttpStatusCode.BadRequest)
                 return@put
@@ -61,7 +64,7 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
                 return@put
             }
             try {
-                TenantContext.withTenant(validated.orgId) {
+                TenantContext.withTenant(orgId) {
                     val user = deps.zitadelAdminClient.setRoles(userId, request.roles)
                     call.respond(user)
                 }
@@ -74,12 +77,13 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
 
         post("/admin/users/{id}/resend-invite") {
             val validated = call.requireUserInvite(deps) ?: return@post
+            val orgId = validated.orgId!!
             val userId = call.parameters["id"] ?: run {
                 call.respondText("Bad Request", status = HttpStatusCode.BadRequest)
                 return@post
             }
             try {
-                TenantContext.withTenant(validated.orgId) {
+                TenantContext.withTenant(orgId) {
                     deps.zitadelAdminClient.resendInvite(userId)
                     call.respondText("", status = HttpStatusCode.NoContent)
                 }
@@ -92,12 +96,13 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
 
         delete("/admin/users/{id}") {
             val validated = call.requireUserInvite(deps) ?: return@delete
+            val orgId = validated.orgId!!
             val userId = call.parameters["id"] ?: run {
                 call.respondText("Bad Request", status = HttpStatusCode.BadRequest)
                 return@delete
             }
             try {
-                TenantContext.withTenant(validated.orgId) {
+                TenantContext.withTenant(orgId) {
                     deps.zitadelAdminClient.deleteUser(userId)
                 }
                 call.respondText("", status = HttpStatusCode.NoContent)
