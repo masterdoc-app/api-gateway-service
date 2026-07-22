@@ -87,7 +87,7 @@ internal data class ZitadelUpdateGrantRequest(
 internal object ZitadelAdminMapping {
     fun toAdminUser(
         user: ZitadelManagementUser,
-        roles: List<String>,
+        features: List<String>,
         includeInviteSent: Boolean,
         inviteSent: Boolean = true,
     ): AdminUser {
@@ -98,7 +98,7 @@ internal object ZitadelAdminMapping {
             email = human?.email?.email.orEmpty(),
             givenName = profile?.resolvedGivenName().orEmpty(),
             familyName = profile?.resolvedFamilyName().orEmpty(),
-            roles = roles,
+            features = features,
             state = UserStateMapper.fromZitadel(user.state, human?.email?.isEmailVerified),
             inviteSent = inviteSent.takeIf { includeInviteSent },
         )
@@ -115,7 +115,7 @@ internal object ZitadelAdminMapping {
             email = grant.email.orEmpty(),
             givenName = grant.firstName.orEmpty(),
             familyName = grant.lastName.orEmpty(),
-            roles = grant.roleKeys,
+            features = grant.roleKeys,
             state = state,
             inviteSent = inviteSent.takeIf { includeInviteSent },
         )

@@ -7,11 +7,11 @@ data class InviteUserRequest(
     val email: String,
     val givenName: String,
     val familyName: String,
-    val roles: List<String>,
+    val features: List<String>,
 )
 
 @Serializable
-data class SetRolesRequest(val roles: List<String>)
+data class SetFeaturesRequest(val features: List<String>)
 
 @Serializable
 data class AdminUser(
@@ -19,7 +19,7 @@ data class AdminUser(
     val email: String,
     val givenName: String,
     val familyName: String,
-    val roles: List<String>,
+    val features: List<String>,
     val state: String,
     val inviteSent: Boolean? = null,
 )

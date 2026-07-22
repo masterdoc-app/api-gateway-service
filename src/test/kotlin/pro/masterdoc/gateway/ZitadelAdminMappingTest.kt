@@ -18,7 +18,7 @@ class ZitadelAdminMappingTest {
                     ),
             )
 
-        val admin = ZitadelAdminMapping.toAdminUser(user, roles = listOf("admin"), includeInviteSent = true)
+        val admin = ZitadelAdminMapping.toAdminUser(user, features = listOf("admin"), includeInviteSent = true)
 
         assertEquals("u1", admin.id)
         assertEquals("Jane", admin.givenName)
@@ -40,7 +40,7 @@ class ZitadelAdminMappingTest {
                     ),
             )
 
-        val admin = ZitadelAdminMapping.toAdminUser(user, roles = emptyList(), includeInviteSent = false)
+        val admin = ZitadelAdminMapping.toAdminUser(user, features = emptyList(), includeInviteSent = false)
 
         assertEquals("active", admin.state)
         assertNull(admin.inviteSent)
@@ -59,7 +59,7 @@ class ZitadelAdminMappingTest {
                     ),
             )
 
-        val admin = ZitadelAdminMapping.toAdminUser(user, roles = listOf("viewer"), includeInviteSent = true)
+        val admin = ZitadelAdminMapping.toAdminUser(user, features = listOf("viewer"), includeInviteSent = true)
 
         assertEquals("invited", admin.state)
     }

@@ -27,7 +27,7 @@ class AdminUserRoutesTest {
             UpstreamResult(
                 HttpStatusCode.OK,
                 "application/json",
-                """{"userInfo":{"id":"a","roles":["admin"]},"features":${json.encodeToString(features.toList())}}"""
+                """{"userInfo":{"id":"a"},"features":${json.encodeToString(features.toList())}}"""
                     .toByteArray(),
             )
         }
@@ -51,7 +51,7 @@ class AdminUserRoutesTest {
         }
         val response = client.post("/admin/users/invites") {
             header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-            setBody("""{"email":"a@b.com","givenName":"A","familyName":"B","roles":["admin"]}""")
+            setBody("""{"email":"a@b.com","givenName":"A","familyName":"B","features":["user_invite"]}""")
         }
         assertEquals(HttpStatusCode.Unauthorized, response.status)
     }
@@ -65,7 +65,7 @@ class AdminUserRoutesTest {
             client.post("/admin/users/invites") {
                 header(HttpHeaders.Authorization, "Bearer good-token")
                 header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                setBody("""{"email":"a@b.com","givenName":"A","familyName":"B","roles":["admin"]}""")
+                setBody("""{"email":"a@b.com","givenName":"A","familyName":"B","features":["user_invite"]}""")
             }
         assertEquals(HttpStatusCode.Forbidden, response.status)
     }
@@ -80,19 +80,19 @@ class AdminUserRoutesTest {
                 header(HttpHeaders.Authorization, "Bearer good-token")
                 header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
                 setBody(
-                    """{"email":"ivan@company.ru","givenName":"Ivan","familyName":"Petrov","roles":["technologist"]}""",
+                    """{"email":"ivan@company.ru","givenName":"Ivan","familyName":"Petrov","features":["charts","equipment"]}""",
                 )
             }
         assertEquals(HttpStatusCode.Created, response.status)
         val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
         assertTrue(body["id"]!!.jsonPrimitive.content.isNotBlank())
         assertEquals("ivan@company.ru", body["email"]!!.jsonPrimitive.content)
-        assertEquals("technologist", body["roles"]!!.jsonArray[0].jsonPrimitive.content)
+        assertEquals("charts", body["features"]!!.jsonArray[0].jsonPrimitive.content)
         assertEquals(true, body["inviteSent"]!!.jsonPrimitive.content.toBooleanStrict())
     }
 
     @Test
-    fun `POST invites with unknown role returns 400`() = testApplication {
+    fun `POST invites with unknown feature returns 400`() = testApplication {
         application {
             module(GatewayConfig.testDefaults(), testDeps(featureClientWith("user_invite")))
         }
@@ -100,7 +100,7 @@ class AdminUserRoutesTest {
             client.post("/admin/users/invites") {
                 header(HttpHeaders.Authorization, "Bearer good-token")
                 header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                setBody("""{"email":"a@b.com","givenName":"A","familyName":"B","roles":["foo"]}""")
+                setBody("""{"email":"a@b.com","givenName":"A","familyName":"B","features":["foo"]}""")
             }
         assertEquals(HttpStatusCode.BadRequest, response.status)
     }
@@ -112,7 +112,7 @@ class AdminUserRoutesTest {
             module(GatewayConfig.testDefaults(), testDeps(featureClientWith("user_invite"), fake))
         }
         val body =
-            """{"email":"dup@company.ru","givenName":"A","familyName":"B","roles":["admin"]}"""
+            """{"email":"dup@company.ru","givenName":"A","familyName":"B","features":["user_invite"]}"""
         client.post("/admin/users/invites") {
             header(HttpHeaders.Authorization, "Bearer good-token")
             header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
@@ -136,7 +136,7 @@ class AdminUserRoutesTest {
         client.post("/admin/users/invites") {
             header(HttpHeaders.Authorization, "Bearer good-token")
             header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-            setBody("""{"email":"list@company.ru","givenName":"L","familyName":"U","roles":["admin"]}""")
+            setBody("""{"email":"list@company.ru","givenName":"L","familyName":"U","features":["user_invite"]}""")
         }
         val response =
             client.get("/admin/users") {
@@ -149,7 +149,7 @@ class AdminUserRoutesTest {
     }
 
     @Test
-    fun `PUT roles with empty roles returns 400`() = testApplication {
+    fun `PUT features with empty features returns 400`() = testApplication {
         val fake = FakeZitadelAdminClient()
         application {
             module(GatewayConfig.testDefaults(), testDeps(featureClientWith("user_invite"), fake))
@@ -158,21 +158,21 @@ class AdminUserRoutesTest {
             client.post("/admin/users/invites") {
                 header(HttpHeaders.Authorization, "Bearer good-token")
                 header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                setBody("""{"email":"roles@company.ru","givenName":"R","familyName":"U","roles":["admin"]}""")
+                setBody("""{"email":"feat@company.ru","givenName":"R","familyName":"U","features":["user_invite"]}""")
             }
         val userId =
             Json.parseToJsonElement(inviteResponse.bodyAsText()).jsonObject["id"]!!.jsonPrimitive.content
         val response =
-            client.put("/admin/users/$userId/roles") {
+            client.put("/admin/users/$userId/features") {
                 header(HttpHeaders.Authorization, "Bearer good-token")
                 header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                setBody("""{"roles":[]}""")
+                setBody("""{"features":[]}""")
             }
         assertEquals(HttpStatusCode.BadRequest, response.status)
     }
 
     @Test
-    fun `PUT roles with valid body returns 200 with updated roles`() = testApplication {
+    fun `PUT features with valid body returns 200 with updated features`() = testApplication {
         val fake = FakeZitadelAdminClient()
         application {
             module(GatewayConfig.testDefaults(), testDeps(featureClientWith("user_invite"), fake))
@@ -181,20 +181,20 @@ class AdminUserRoutesTest {
             client.post("/admin/users/invites") {
                 header(HttpHeaders.Authorization, "Bearer good-token")
                 header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                setBody("""{"email":"update@company.ru","givenName":"U","familyName":"P","roles":["admin"]}""")
+                setBody("""{"email":"update@company.ru","givenName":"U","familyName":"P","features":["user_invite"]}""")
             }
         val userId =
             Json.parseToJsonElement(inviteResponse.bodyAsText()).jsonObject["id"]!!.jsonPrimitive.content
         val response =
-            client.put("/admin/users/$userId/roles") {
+            client.put("/admin/users/$userId/features") {
                 header(HttpHeaders.Authorization, "Bearer good-token")
                 header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                setBody("""{"roles":["technologist","reporter"]}""")
+                setBody("""{"features":["charts","equipment"]}""")
             }
         assertEquals(HttpStatusCode.OK, response.status)
         val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
-        assertEquals("technologist", body["roles"]!!.jsonArray[0].jsonPrimitive.content)
-        assertEquals("reporter", body["roles"]!!.jsonArray[1].jsonPrimitive.content)
+        assertEquals("charts", body["features"]!!.jsonArray[0].jsonPrimitive.content)
+        assertEquals("equipment", body["features"]!!.jsonArray[1].jsonPrimitive.content)
     }
 
     @Test
@@ -206,7 +206,7 @@ class AdminUserRoutesTest {
                 email = "active@company.ru",
                 givenName = "A",
                 familyName = "U",
-                roles = listOf("admin"),
+                features = listOf("user_invite"),
                 state = "active",
             ),
         )
@@ -230,7 +230,7 @@ class AdminUserRoutesTest {
                 email = "invited@company.ru",
                 givenName = "I",
                 familyName = "U",
-                roles = listOf("admin"),
+                features = listOf("user_invite"),
                 state = "invited",
                 inviteSent = true,
             ),
