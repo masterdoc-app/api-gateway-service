@@ -43,6 +43,7 @@ fun Application.module(
     installFeaturesRoutes(deps)
     installV1ProxyRoutes(deps)
     installAdminUserRoutes(deps)
+    installEquipmentRoutes(config, deps)
 }
 
 data class GatewayDeps(

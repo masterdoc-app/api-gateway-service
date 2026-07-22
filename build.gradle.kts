@@ -33,6 +33,7 @@ dependencies {
     testImplementation(kotlin("test"))
     testImplementation("io.ktor:ktor-server-test-host-jvm:$ktor")
     testImplementation("io.ktor:ktor-client-mock-jvm:$ktor")
+    implementation("org.jetbrains.kotlinx:kotlinx-io-core:0.6.0")
 }
 
 kotlin {
