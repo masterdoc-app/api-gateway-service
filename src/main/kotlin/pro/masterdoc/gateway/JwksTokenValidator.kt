@@ -19,17 +19,21 @@ class JwksTokenValidator(
             .rateLimited(false)
             .build()
 
-    override suspend fun validate(bearerToken: String): String? {
+    override suspend fun validate(bearerToken: String): ValidatedToken? {
         return try {
             val decoded: DecodedJWT = JWT.decode(bearerToken)
             val jwk = jwkProvider.get(decoded.keyId)
             val algorithm = Algorithm.RSA256(jwk.publicKey as RSAPublicKey, null)
-            val verifier =
+            val verified =
                 JWT.require(algorithm)
                     .withIssuer(issuer)
                     .build()
-            val verified = verifier.verify(bearerToken)
-            verified.subject
+                    .verify(bearerToken)
+            val subject = verified.subject?.takeIf { it.isNotBlank() } ?: return null
+            val org =
+                verified.getClaim(OrgClaimExtractor.ORG_ID_CLAIM).asString()?.trim()?.takeIf { it.isNotEmpty() }
+                    ?: return null
+            ValidatedToken(subject = subject, orgId = org)
         } catch (_: JWTVerificationException) {
             null
         } catch (_: Exception) {

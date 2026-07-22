@@ -91,14 +91,17 @@ class HttpBackendProxyClient(
 }
 
 fun interface TokenValidator {
-    /** Returns subject if valid; null if invalid. */
-    suspend fun validate(bearerToken: String): String?
+    /** Valid token with subject + org; null if invalid / missing org claim. */
+    suspend fun validate(bearerToken: String): ValidatedToken?
 
     companion object {
         fun jwks(issuer: String, jwkSetUri: String): TokenValidator =
             JwksTokenValidator(issuer, jwkSetUri)
 
-        fun accepting(): TokenValidator = TokenValidator { "test-sub" }
+        fun accepting(
+            subject: String = "test-sub",
+            orgId: String = "test-org",
+        ): TokenValidator = TokenValidator { ValidatedToken(subject, orgId) }
 
         fun rejecting(): TokenValidator = TokenValidator { null }
     }
