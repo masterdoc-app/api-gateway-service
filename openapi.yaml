@@ -9,7 +9,7 @@ info:
     - `GET /auth/url` — куда открыть браузер для логина (страница Zitadel)
     - `POST /auth/token` — обмен code / refresh на токены (BFF → Zitadel)
     - `GET /me` — userInfo + features (нужен Bearer JWT)
-    - `/admin/users*` — invite / list / features / resend / revoke (Bearer + feature `user_invite`)
+    - `/admin/users*` — invite / list / features / resend / delete (Bearer + feature `user_invite`)
     - `/v1/*` — proxy в backend
 
 servers:
@@ -269,11 +269,11 @@ paths:
 
   /admin/users/{id}:
     delete:
-      operationId: deleteAdminUserInvite
-      summary: Revoke invitation by deleting an invited user
+      operationId: deleteAdminUser
+      summary: Delete an organization user
       description: |
-        Hard-deletes the user in Zitadel when state is `invited`.
-        Returns 409 if the user is already active (or otherwise not invited).
+        Hard-deletes the user in Zitadel (`invited`, `active`, or `inactive`).
+        Returns 409 if `{id}` equals the caller's JWT `sub` (cannot delete yourself).
         Scoped to the caller's org from JWT (`urn:zitadel:iam:org:id` or `urn:zitadel:iam:user:resourceowner:id`).
       security:
         - bearerAuth: []
@@ -285,7 +285,7 @@ paths:
             type: string
       responses:
         "204":
-          description: Invitation revoked (user deleted)
+          description: User deleted
         "401":
           description: Missing or invalid JWT / missing org claim
         "403":
@@ -293,7 +293,7 @@ paths:
         "404":
           description: Unknown user id (plain text)
         "409":
-          description: User is not in invited state (plain text)
+          description: Cannot delete yourself (plain text)
         "502":
           description: Zitadel Management API unavailable
 

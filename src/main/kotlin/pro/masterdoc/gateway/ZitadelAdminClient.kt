@@ -194,10 +194,7 @@ class HttpZitadelAdminClient(
     }
 
     override suspend fun deleteUser(userId: String) {
-        val user = findUser(userId) ?: throw ZitadelAdminException.NotFound("user not found")
-        if (UserStateMapper.fromZitadel(user.state, user.human?.email?.isEmailVerified) != "invited") {
-            throw ZitadelAdminException.Conflict("only invited users can be revoked")
-        }
+        findUser(userId) ?: throw ZitadelAdminException.NotFound("user not found")
         val response = deleteJson("$baseUrl/management/v1/users/$userId")
         ensureSuccess(response)
     }
@@ -497,9 +494,6 @@ class FakeZitadelAdminClient : ZitadelAdminClient {
 
     override suspend fun deleteUser(userId: String) {
         val user = usersById[userId] ?: throw ZitadelAdminException.NotFound("user not found")
-        if (user.state != "invited") {
-            throw ZitadelAdminException.Conflict("only invited users can be revoked")
-        }
         usersById.remove(userId)
         idByEmail.remove(user.email.lowercase())
     }

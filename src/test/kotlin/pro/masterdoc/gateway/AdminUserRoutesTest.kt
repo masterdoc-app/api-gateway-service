@@ -360,7 +360,7 @@ class AdminUserRoutesTest {
     }
 
     @Test
-    fun `DELETE active user returns 409`() = testApplication {
+    fun `DELETE active user returns 204 and removes from list`() = testApplication {
         val fake = FakeZitadelAdminClient()
         application {
             module(GatewayConfig.testDefaults(), testDeps(featureClientWith("user_invite"), fake))
@@ -379,6 +379,44 @@ class AdminUserRoutesTest {
 
         val deleteResponse =
             client.delete("/admin/users/$userId") {
+                header(HttpHeaders.Authorization, "Bearer good-token")
+            }
+        assertEquals(HttpStatusCode.NoContent, deleteResponse.status)
+
+        val listResponse =
+            client.get("/admin/users") {
+                header(HttpHeaders.Authorization, "Bearer good-token")
+            }
+        val total =
+            Json.parseToJsonElement(listResponse.bodyAsText()).jsonObject["total"]!!.jsonPrimitive.content.toInt()
+        assertEquals(0, total)
+    }
+
+    @Test
+    fun `DELETE self returns 409`() = testApplication {
+        val fake = FakeZitadelAdminClient()
+        application {
+            module(
+                GatewayConfig.testDefaults(),
+                testDeps(
+                    featureClientWith("user_invite"),
+                    fake,
+                    tokenValidator = TokenValidator.accepting(subject = "self-user", orgId = "test-org"),
+                ),
+            )
+        }
+        fake.seed(
+            AdminUser(
+                id = "self-user",
+                email = "self@company.ru",
+                givenName = "Self",
+                familyName = "User",
+                features = listOf("user_invite"),
+                state = "active",
+            ),
+        )
+        val deleteResponse =
+            client.delete("/admin/users/self-user") {
                 header(HttpHeaders.Authorization, "Bearer good-token")
             }
         assertEquals(HttpStatusCode.Conflict, deleteResponse.status)

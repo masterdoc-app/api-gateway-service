@@ -11,23 +11,22 @@ class FakeZitadelAdminClientDeleteTest {
         val fake = FakeZitadelAdminClient()
         val created =
             fake.inviteUser(
-                InviteUserRequest("a@b.com", "A", "B", listOf("technologist")),
+                InviteUserRequest("a@b.com", "A", "B", listOf("board")),
             )
         fake.deleteUser(created.id)
         assertEquals(0, fake.listUsers(50, 0).total)
     }
 
     @Test
-    fun `deleteUser on active throws Conflict`() = runBlocking {
+    fun `deleteUser removes active user`() = runBlocking {
         val fake = FakeZitadelAdminClient()
         val created =
             fake.inviteUser(
-                InviteUserRequest("a@b.com", "A", "B", listOf("technologist")),
+                InviteUserRequest("a@b.com", "A", "B", listOf("board")),
             )
         fake.markActive(created.id)
-        assertFailsWith<ZitadelAdminException.Conflict> {
-            fake.deleteUser(created.id)
-        }
+        fake.deleteUser(created.id)
+        assertEquals(0, fake.listUsers(50, 0).total)
     }
 
     @Test

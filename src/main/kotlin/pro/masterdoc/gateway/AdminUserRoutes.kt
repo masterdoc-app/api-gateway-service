@@ -101,6 +101,10 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
                 call.respondText("Bad Request", status = HttpStatusCode.BadRequest)
                 return@delete
             }
+            if (userId == validated.subject) {
+                call.respondText("cannot delete yourself", status = HttpStatusCode.Conflict)
+                return@delete
+            }
             try {
                 TenantContext.withTenant(orgId) {
                     deps.zitadelAdminClient.deleteUser(userId)
