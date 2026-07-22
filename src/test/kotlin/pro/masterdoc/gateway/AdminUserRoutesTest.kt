@@ -1,5 +1,6 @@
 package pro.masterdoc.gateway
 
+import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.post
@@ -291,6 +292,63 @@ class AdminUserRoutesTest {
                 setBody("""{"email":"a@b.com","givenName":"A","familyName":"B","roles":["admin"]}""")
             }
         assertEquals(HttpStatusCode.Unauthorized, response.status)
+    }
+
+    @Test
+    fun `DELETE invited user returns 204 and removes from list`() = testApplication {
+        val fake = FakeZitadelAdminClient()
+        application {
+            module(GatewayConfig.testDefaults(), testDeps(featureClientWith("user_invite"), fake))
+        }
+        val inviteResponse =
+            client.post("/admin/users/invites") {
+                header(HttpHeaders.Authorization, "Bearer good-token")
+                header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                setBody(
+                    """{"email":"invited@company.ru","givenName":"I","familyName":"N","roles":["technologist"]}""",
+                )
+            }
+        val userId =
+            Json.parseToJsonElement(inviteResponse.bodyAsText()).jsonObject["id"]!!.jsonPrimitive.content
+
+        val deleteResponse =
+            client.delete("/admin/users/$userId") {
+                header(HttpHeaders.Authorization, "Bearer good-token")
+            }
+        assertEquals(HttpStatusCode.NoContent, deleteResponse.status)
+
+        val listResponse =
+            client.get("/admin/users") {
+                header(HttpHeaders.Authorization, "Bearer good-token")
+            }
+        val total =
+            Json.parseToJsonElement(listResponse.bodyAsText()).jsonObject["total"]!!.jsonPrimitive.content.toInt()
+        assertEquals(0, total)
+    }
+
+    @Test
+    fun `DELETE active user returns 409`() = testApplication {
+        val fake = FakeZitadelAdminClient()
+        application {
+            module(GatewayConfig.testDefaults(), testDeps(featureClientWith("user_invite"), fake))
+        }
+        val inviteResponse =
+            client.post("/admin/users/invites") {
+                header(HttpHeaders.Authorization, "Bearer good-token")
+                header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                setBody(
+                    """{"email":"active@company.ru","givenName":"A","familyName":"C","roles":["technologist"]}""",
+                )
+            }
+        val userId =
+            Json.parseToJsonElement(inviteResponse.bodyAsText()).jsonObject["id"]!!.jsonPrimitive.content
+        fake.markActive(userId)
+
+        val deleteResponse =
+            client.delete("/admin/users/$userId") {
+                header(HttpHeaders.Authorization, "Bearer good-token")
+            }
+        assertEquals(HttpStatusCode.Conflict, deleteResponse.status)
     }
 
     @Test

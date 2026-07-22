@@ -6,6 +6,7 @@ import io.ktor.server.application.call
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
+import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.put
@@ -82,6 +83,24 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
                     deps.zitadelAdminClient.resendInvite(userId)
                     call.respondText("", status = HttpStatusCode.NoContent)
                 }
+            } catch (e: ZitadelAdminException) {
+                call.respondZitadelAdminException(e)
+            } catch (_: UpstreamUnavailableException) {
+                call.respondText("Bad Gateway", status = HttpStatusCode.BadGateway)
+            }
+        }
+
+        delete("/admin/users/{id}") {
+            val validated = call.requireUserInvite(deps) ?: return@delete
+            val userId = call.parameters["id"] ?: run {
+                call.respondText("Bad Request", status = HttpStatusCode.BadRequest)
+                return@delete
+            }
+            try {
+                TenantContext.withTenant(validated.orgId) {
+                    deps.zitadelAdminClient.deleteUser(userId)
+                }
+                call.respondText("", status = HttpStatusCode.NoContent)
             } catch (e: ZitadelAdminException) {
                 call.respondZitadelAdminException(e)
             } catch (_: UpstreamUnavailableException) {
