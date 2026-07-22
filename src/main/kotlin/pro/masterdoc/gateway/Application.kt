@@ -40,6 +40,7 @@ fun Application.module(
     installAuthUrlRoutes(config)
     installAuthTokenRoutes(deps)
     installMeRoutes(deps)
+    installFeaturesRoutes(deps)
     installV1ProxyRoutes(deps)
     installAdminUserRoutes(deps)
 }
