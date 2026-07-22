@@ -224,8 +224,9 @@ class HttpZitadelAdminClient(
                 putJsonArray("queries") {
                     add(
                         buildJsonObject {
+                            // proto UserIDQuery.id → JSON "id" (not "userId")
                             putJsonObject("userIdQuery") {
-                                put("userId", userId)
+                                put("id", userId)
                             }
                         },
                     )
