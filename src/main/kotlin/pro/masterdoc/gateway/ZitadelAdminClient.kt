@@ -4,6 +4,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.delete
+import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.put
@@ -214,28 +215,30 @@ class HttpZitadelAdminClient(
     }
 
     private suspend fun findUser(userId: String): ZitadelManagementUser? {
-        val searchBody =
-            buildJsonObject {
-                putJsonObject("query") {
-                    put("offset", 0)
-                    put("limit", 1)
-                    put("asc", true)
-                }
-                putJsonArray("queries") {
-                    add(
-                        buildJsonObject {
-                            // proto UserIDQuery.id → JSON "id" (not "userId")
-                            putJsonObject("userIdQuery") {
-                                put("id", userId)
-                            }
-                        },
-                    )
-                }
-            }
-        val response = postJson("$baseUrl/management/v1/users/_search", searchBody.toString())
+        val response = getJson("$baseUrl/v2/users/$userId")
+        if (response.status == HttpStatusCode.NotFound) {
+            return null
+        }
         ensureSuccess(response)
         return decodeResponse(response.body) {
-            json.decodeFromString<ZitadelUsersSearchResponse>(response.body).result.firstOrNull()
+            val v2 = json.decodeFromString<ZitadelV2GetUserResponse>(response.body).user ?: return@decodeResponse null
+            ZitadelManagementUser(
+                id = v2.userId,
+                state = v2.state,
+                human =
+                    v2.human?.let { h ->
+                        ZitadelHuman(
+                            profile = h.profile,
+                            email =
+                                h.email?.let { e ->
+                                    ZitadelHumanEmail(
+                                        email = e.email,
+                                        isEmailVerified = e.isVerified,
+                                    )
+                                },
+                        )
+                    },
+            )
         }
     }
 
@@ -310,6 +313,20 @@ class HttpZitadelAdminClient(
                     header(HttpHeaders.ContentType, "application/json")
                     header(HttpHeaders.Accept, "application/json")
                     setBody(body)
+                }
+            HttpTextResponse(response.status, response.bodyAsText())
+        } catch (e: ZitadelAdminException) {
+            throw e
+        } catch (e: Exception) {
+            throw ZitadelAdminException.Upstream("zitadel admin request failed: ${e.message}")
+        }
+
+    private suspend fun getJson(url: String): HttpTextResponse =
+        try {
+            val response =
+                client.get(url) {
+                    applyAuthHeaders()
+                    header(HttpHeaders.Accept, "application/json")
                 }
             HttpTextResponse(response.status, response.bodyAsText())
         } catch (e: ZitadelAdminException) {

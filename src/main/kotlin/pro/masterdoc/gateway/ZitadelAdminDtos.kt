@@ -58,6 +58,30 @@ internal data class ZitadelHumanEmail(
 )
 
 @Serializable
+internal data class ZitadelV2GetUserResponse(
+    val user: ZitadelV2User? = null,
+)
+
+@Serializable
+internal data class ZitadelV2User(
+    @SerialName("userId") val userId: String? = null,
+    val state: String? = null,
+    val human: ZitadelV2Human? = null,
+)
+
+@Serializable
+internal data class ZitadelV2Human(
+    val profile: ZitadelHumanProfile? = null,
+    val email: ZitadelV2Email? = null,
+)
+
+@Serializable
+internal data class ZitadelV2Email(
+    val email: String? = null,
+    @SerialName("isVerified") val isVerified: Boolean? = null,
+)
+
+@Serializable
 internal data class ZitadelGrantsSearchResponse(
     val result: List<ZitadelUserGrant> = emptyList(),
 )
