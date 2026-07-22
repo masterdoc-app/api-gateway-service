@@ -22,6 +22,29 @@ import kotlinx.serialization.json.jsonPrimitive
 class AdminUserRoutesTest {
     private val json = Json { ignoreUnknownKeys = true }
 
+    private class RecordingOrgAdminClient : ZitadelAdminClient {
+        val seenOrgIds = mutableListOf<String>()
+
+        override suspend fun inviteUser(request: InviteUserRequest): AdminUser {
+            seenOrgIds += TenantContext.requireOrgId()
+            return FakeZitadelAdminClient().inviteUser(request)
+        }
+
+        override suspend fun listUsers(limit: Int, offset: Int): AdminUserList {
+            seenOrgIds += TenantContext.requireOrgId()
+            return AdminUserList(emptyList(), 0)
+        }
+
+        override suspend fun setRoles(userId: String, roles: List<String>): AdminUser {
+            seenOrgIds += TenantContext.requireOrgId()
+            return FakeZitadelAdminClient().setRoles(userId, roles)
+        }
+
+        override suspend fun resendInvite(userId: String) {
+            seenOrgIds += TenantContext.requireOrgId()
+        }
+    }
+
     private fun featureClientWith(vararg features: String): FeatureServiceClient =
         FeatureServiceClient {
             UpstreamResult(
@@ -219,6 +242,51 @@ class AdminUserRoutesTest {
                 header(HttpHeaders.Authorization, "Bearer good-token")
             }
         assertEquals(HttpStatusCode.Conflict, response.status)
+    }
+
+    @Test
+    fun `POST invites uses org id from validated token not env`() = testApplication {
+        val recording = RecordingOrgAdminClient()
+        application {
+            module(
+                GatewayConfig.testDefaults(),
+                testDeps(
+                    featureClientWith("user_invite"),
+                    zitadelAdminClient = recording,
+                    tokenValidator = TokenValidator.accepting(orgId = "org-from-jwt"),
+                ),
+            )
+        }
+        val response =
+            client.post("/admin/users/invites") {
+                header(HttpHeaders.Authorization, "Bearer good-token")
+                header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                setBody(
+                    """{"email":"ivan@company.ru","givenName":"Ivan","familyName":"Petrov","roles":["technologist"]}""",
+                )
+            }
+        assertEquals(HttpStatusCode.Created, response.status)
+        assertEquals(listOf("org-from-jwt"), recording.seenOrgIds)
+    }
+
+    @Test
+    fun `POST invites with validator missing org returns 401`() = testApplication {
+        application {
+            module(
+                GatewayConfig.testDefaults(),
+                testDeps(
+                    featureClientWith("user_invite"),
+                    tokenValidator = TokenValidator.rejecting(),
+                ),
+            )
+        }
+        val response =
+            client.post("/admin/users/invites") {
+                header(HttpHeaders.Authorization, "Bearer bad")
+                header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                setBody("""{"email":"a@b.com","givenName":"A","familyName":"B","roles":["admin"]}""")
+            }
+        assertEquals(HttpStatusCode.Unauthorized, response.status)
     }
 
     @Test

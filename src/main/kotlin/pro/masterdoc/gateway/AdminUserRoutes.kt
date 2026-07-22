@@ -14,15 +14,17 @@ import io.ktor.server.routing.routing
 fun Application.installAdminUserRoutes(deps: GatewayDeps) {
     routing {
         post("/admin/users/invites") {
-            if (!call.requireUserInvite(deps)) return@post
+            val validated = call.requireUserInvite(deps) ?: return@post
             val request = call.receive<InviteUserRequest>()
             ProductRoles.validate(request.roles)?.let { error ->
                 call.respondText(error, status = HttpStatusCode.BadRequest)
                 return@post
             }
             try {
-                val user = deps.zitadelAdminClient.inviteUser(request)
-                call.respond(HttpStatusCode.Created, user)
+                TenantContext.withTenant(validated.orgId) {
+                    val user = deps.zitadelAdminClient.inviteUser(request)
+                    call.respond(HttpStatusCode.Created, user)
+                }
             } catch (e: ZitadelAdminException) {
                 call.respondZitadelAdminException(e)
             } catch (_: UpstreamUnavailableException) {
@@ -31,12 +33,14 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
         }
 
         get("/admin/users") {
-            if (!call.requireUserInvite(deps)) return@get
+            val validated = call.requireUserInvite(deps) ?: return@get
             val limit = call.request.queryParameters["limit"]?.toIntOrNull()?.coerceIn(1, 100) ?: 50
             val offset = call.request.queryParameters["offset"]?.toIntOrNull()?.coerceAtLeast(0) ?: 0
             try {
-                val list = deps.zitadelAdminClient.listUsers(limit, offset)
-                call.respond(list)
+                TenantContext.withTenant(validated.orgId) {
+                    val list = deps.zitadelAdminClient.listUsers(limit, offset)
+                    call.respond(list)
+                }
             } catch (e: ZitadelAdminException) {
                 call.respondZitadelAdminException(e)
             } catch (_: UpstreamUnavailableException) {
@@ -45,7 +49,7 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
         }
 
         put("/admin/users/{id}/roles") {
-            if (!call.requireUserInvite(deps)) return@put
+            val validated = call.requireUserInvite(deps) ?: return@put
             val userId = call.parameters["id"] ?: run {
                 call.respondText("Bad Request", status = HttpStatusCode.BadRequest)
                 return@put
@@ -56,8 +60,10 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
                 return@put
             }
             try {
-                val user = deps.zitadelAdminClient.setRoles(userId, request.roles)
-                call.respond(user)
+                TenantContext.withTenant(validated.orgId) {
+                    val user = deps.zitadelAdminClient.setRoles(userId, request.roles)
+                    call.respond(user)
+                }
             } catch (e: ZitadelAdminException) {
                 call.respondZitadelAdminException(e)
             } catch (_: UpstreamUnavailableException) {
@@ -66,14 +72,16 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
         }
 
         post("/admin/users/{id}/resend-invite") {
-            if (!call.requireUserInvite(deps)) return@post
+            val validated = call.requireUserInvite(deps) ?: return@post
             val userId = call.parameters["id"] ?: run {
                 call.respondText("Bad Request", status = HttpStatusCode.BadRequest)
                 return@post
             }
             try {
-                deps.zitadelAdminClient.resendInvite(userId)
-                call.respondText("", status = HttpStatusCode.NoContent)
+                TenantContext.withTenant(validated.orgId) {
+                    deps.zitadelAdminClient.resendInvite(userId)
+                    call.respondText("", status = HttpStatusCode.NoContent)
+                }
             } catch (e: ZitadelAdminException) {
                 call.respondZitadelAdminException(e)
             } catch (_: UpstreamUnavailableException) {
