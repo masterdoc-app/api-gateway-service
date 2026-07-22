@@ -59,7 +59,7 @@ Admin org scoping comes from JWT (ambient `TenantContext`), not from gateway env
 | `DEPLOY_USER` | SSH user |
 | `DEPLOY_HOST` | VPS host |
 | `ZITADEL_PROJECT_ID` | Project for role grants, e.g. `382623622436487171` (masterdoc-toir) |
-| `ZITADEL_MGMT_TOKEN` | PAT with user/grant management (prefer `terraform-masterdoc` / repo secret `ZITADEL_TOKEN` in masterdoc-zitadel over bootstrap `login-client.pat`) |
+| `ZITADEL_MGMT_TOKEN` | PAT with user/grant management. Prefer `terraform-masterdoc` (`ZITADEL_TOKEN` in masterdoc-zitadel). If using bootstrap `login-client`, grant it **ORG_OWNER** (or at least `ORG_USER_MANAGER`) on each client org via workflow **Ensure Mgmt PAT Org Member**. |
 
 Env file on VPS is not committed. Deploy job upserts the two `ZITADEL_*` admin vars when secrets are set.
 
