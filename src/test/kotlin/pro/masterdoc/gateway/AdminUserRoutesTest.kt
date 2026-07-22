@@ -1,5 +1,6 @@
 package pro.masterdoc.gateway
 
+import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.post
@@ -21,6 +22,33 @@ import kotlinx.serialization.json.jsonPrimitive
 
 class AdminUserRoutesTest {
     private val json = Json { ignoreUnknownKeys = true }
+
+    private class RecordingOrgAdminClient : ZitadelAdminClient {
+        val seenOrgIds = mutableListOf<String>()
+
+        override suspend fun inviteUser(request: InviteUserRequest): AdminUser {
+            seenOrgIds += TenantContext.requireOrgId()
+            return FakeZitadelAdminClient().inviteUser(request)
+        }
+
+        override suspend fun listUsers(limit: Int, offset: Int): AdminUserList {
+            seenOrgIds += TenantContext.requireOrgId()
+            return AdminUserList(emptyList(), 0)
+        }
+
+        override suspend fun setFeatures(userId: String, features: List<String>): AdminUser {
+            seenOrgIds += TenantContext.requireOrgId()
+            return FakeZitadelAdminClient().setFeatures(userId, features)
+        }
+
+        override suspend fun resendInvite(userId: String) {
+            seenOrgIds += TenantContext.requireOrgId()
+        }
+
+        override suspend fun deleteUser(userId: String) {
+            seenOrgIds += TenantContext.requireOrgId()
+        }
+    }
 
     private fun featureClientWith(vararg features: String): FeatureServiceClient =
         FeatureServiceClient {
@@ -219,6 +247,141 @@ class AdminUserRoutesTest {
                 header(HttpHeaders.Authorization, "Bearer good-token")
             }
         assertEquals(HttpStatusCode.Conflict, response.status)
+    }
+
+    @Test
+    fun `POST invites uses org id from validated token not env`() = testApplication {
+        val recording = RecordingOrgAdminClient()
+        application {
+            module(
+                GatewayConfig.testDefaults(),
+                testDeps(
+                    featureClientWith("user_invite"),
+                    zitadelAdminClient = recording,
+                    tokenValidator = TokenValidator.accepting(orgId = "org-from-jwt"),
+                ),
+            )
+        }
+        val response =
+            client.post("/admin/users/invites") {
+                header(HttpHeaders.Authorization, "Bearer good-token")
+                header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                setBody(
+                    """{"email":"ivan@company.ru","givenName":"Ivan","familyName":"Petrov","features":["charts"]}""",
+                )
+            }
+        assertEquals(HttpStatusCode.Created, response.status)
+        assertEquals(listOf("org-from-jwt"), recording.seenOrgIds)
+    }
+
+    @Test
+    fun `POST invites with validator missing org returns 401`() = testApplication {
+        application {
+            module(
+                GatewayConfig.testDefaults(),
+                testDeps(
+                    featureClientWith("user_invite"),
+                    tokenValidator = TokenValidator.acceptingWithoutOrg(),
+                ),
+            )
+        }
+        val response =
+            client.post("/admin/users/invites") {
+                header(HttpHeaders.Authorization, "Bearer good-token")
+                header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                setBody("""{"email":"a@b.com","givenName":"A","familyName":"B","features":["user_invite"]}""")
+            }
+        assertEquals(HttpStatusCode.Unauthorized, response.status)
+    }
+
+    @Test
+    fun `admin routes scope org A vs org B without bleed`() = testApplication {
+        val recording = RecordingOrgAdminClient()
+        application {
+            module(
+                GatewayConfig.testDefaults(),
+                testDeps(
+                    featureClientWith("user_invite"),
+                    zitadelAdminClient = recording,
+                    tokenValidator =
+                        TokenValidator { token ->
+                            when (token) {
+                                "token-org-a" -> ValidatedToken("sub-a", "org-a")
+                                "token-org-b" -> ValidatedToken("sub-b", "org-b")
+                                else -> null
+                            }
+                        },
+                ),
+            )
+        }
+        val inviteBody =
+            """{"email":"ivan@company.ru","givenName":"Ivan","familyName":"Petrov","features":["charts"]}"""
+        client.post("/admin/users/invites") {
+            header(HttpHeaders.Authorization, "Bearer token-org-a")
+            header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            setBody(inviteBody)
+        }
+        client.get("/admin/users") {
+            header(HttpHeaders.Authorization, "Bearer token-org-b")
+        }
+        assertEquals(listOf("org-a", "org-b"), recording.seenOrgIds)
+    }
+
+    @Test
+    fun `DELETE invited user returns 204 and removes from list`() = testApplication {
+        val fake = FakeZitadelAdminClient()
+        application {
+            module(GatewayConfig.testDefaults(), testDeps(featureClientWith("user_invite"), fake))
+        }
+        val inviteResponse =
+            client.post("/admin/users/invites") {
+                header(HttpHeaders.Authorization, "Bearer good-token")
+                header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                setBody(
+                    """{"email":"invited@company.ru","givenName":"I","familyName":"N","features":["charts"]}""",
+                )
+            }
+        val userId =
+            Json.parseToJsonElement(inviteResponse.bodyAsText()).jsonObject["id"]!!.jsonPrimitive.content
+
+        val deleteResponse =
+            client.delete("/admin/users/$userId") {
+                header(HttpHeaders.Authorization, "Bearer good-token")
+            }
+        assertEquals(HttpStatusCode.NoContent, deleteResponse.status)
+
+        val listResponse =
+            client.get("/admin/users") {
+                header(HttpHeaders.Authorization, "Bearer good-token")
+            }
+        val total =
+            Json.parseToJsonElement(listResponse.bodyAsText()).jsonObject["total"]!!.jsonPrimitive.content.toInt()
+        assertEquals(0, total)
+    }
+
+    @Test
+    fun `DELETE active user returns 409`() = testApplication {
+        val fake = FakeZitadelAdminClient()
+        application {
+            module(GatewayConfig.testDefaults(), testDeps(featureClientWith("user_invite"), fake))
+        }
+        val inviteResponse =
+            client.post("/admin/users/invites") {
+                header(HttpHeaders.Authorization, "Bearer good-token")
+                header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                setBody(
+                    """{"email":"active@company.ru","givenName":"A","familyName":"C","features":["charts"]}""",
+                )
+            }
+        val userId =
+            Json.parseToJsonElement(inviteResponse.bodyAsText()).jsonObject["id"]!!.jsonPrimitive.content
+        fake.markActive(userId)
+
+        val deleteResponse =
+            client.delete("/admin/users/$userId") {
+                header(HttpHeaders.Authorization, "Bearer good-token")
+            }
+        assertEquals(HttpStatusCode.Conflict, deleteResponse.status)
     }
 
     @Test

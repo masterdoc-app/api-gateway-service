@@ -3,6 +3,7 @@ package pro.masterdoc.gateway
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.delete
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.put
@@ -20,6 +21,10 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 
+internal object ZitadelAdminOrgHeader {
+    fun resolve(): String = TenantContext.requireOrgId()
+}
+
 interface ZitadelAdminClient {
     suspend fun inviteUser(request: InviteUserRequest): AdminUser
 
@@ -28,6 +33,8 @@ interface ZitadelAdminClient {
     suspend fun setFeatures(userId: String, features: List<String>): AdminUser
 
     suspend fun resendInvite(userId: String)
+
+    suspend fun deleteUser(userId: String)
 
     companion object {
         fun unconfigured(): ZitadelAdminClient =
@@ -42,14 +49,13 @@ interface ZitadelAdminClient {
                 override suspend fun setFeatures(userId: String, features: List<String>): AdminUser = fail()
 
                 override suspend fun resendInvite(userId: String) = fail()
+
+                override suspend fun deleteUser(userId: String) = fail()
             }
 
         fun http(config: GatewayConfig): ZitadelAdminClient {
             if (config.zitadelMgmtToken.isBlank()) {
                 return notConfiguredClient("ZITADEL_MGMT_TOKEN not set")
-            }
-            if (config.zitadelOrgId.isBlank()) {
-                return notConfiguredClient("ZITADEL_ORG_ID not set")
             }
             return HttpZitadelAdminClient(config)
         }
@@ -65,6 +71,8 @@ interface ZitadelAdminClient {
                 override suspend fun setFeatures(userId: String, features: List<String>): AdminUser = fail()
 
                 override suspend fun resendInvite(userId: String) = fail()
+
+                override suspend fun deleteUser(userId: String) = fail()
             }
     }
 }
@@ -182,6 +190,15 @@ class HttpZitadelAdminClient(
             }
         val inviteResponse = postJson("$baseUrl/v2/users/$userId/invite_code", body.toString())
         ensureSuccess(inviteResponse)
+    }
+
+    override suspend fun deleteUser(userId: String) {
+        val user = findUser(userId) ?: throw ZitadelAdminException.NotFound("user not found")
+        if (UserStateMapper.fromZitadel(user.state, user.human?.email?.isEmailVerified) != "invited") {
+            throw ZitadelAdminException.Conflict("only invited users can be revoked")
+        }
+        val response = deleteJson("$baseUrl/v2/users/$userId")
+        ensureSuccess(response)
     }
 
     private suspend fun fetchUser(userId: String, includeInviteSent: Boolean): AdminUser {
@@ -316,6 +333,20 @@ class HttpZitadelAdminClient(
             throw ZitadelAdminException.Upstream("zitadel admin request failed: ${e.message}")
         }
 
+    private suspend fun deleteJson(url: String): HttpTextResponse =
+        try {
+            val response =
+                client.delete(url) {
+                    applyAuthHeaders()
+                    header(HttpHeaders.Accept, "application/json")
+                }
+            HttpTextResponse(response.status, response.bodyAsText())
+        } catch (e: ZitadelAdminException) {
+            throw e
+        } catch (e: Exception) {
+            throw ZitadelAdminException.Upstream("zitadel admin request failed: ${e.message}")
+        }
+
     private fun ensureSuccess(
         response: HttpTextResponse,
         onError: (HttpStatusCode, String) -> Nothing = { status, body ->
@@ -329,7 +360,7 @@ class HttpZitadelAdminClient(
 
     private fun io.ktor.client.request.HttpRequestBuilder.applyAuthHeaders() {
         header(HttpHeaders.Authorization, "Bearer ${config.zitadelMgmtToken}")
-        header("x-zitadel-orgid", config.zitadelOrgId)
+        header("x-zitadel-orgid", ZitadelAdminOrgHeader.resolve())
     }
 
     private inline fun <T> decodeResponse(body: String, decode: () -> T): T =
@@ -444,6 +475,15 @@ class FakeZitadelAdminClient : ZitadelAdminClient {
             throw ZitadelAdminException.Conflict("user is already active")
         }
         user.inviteSent = true
+    }
+
+    override suspend fun deleteUser(userId: String) {
+        val user = usersById[userId] ?: throw ZitadelAdminException.NotFound("user not found")
+        if (user.state != "invited") {
+            throw ZitadelAdminException.Conflict("only invited users can be revoked")
+        }
+        usersById.remove(userId)
+        idByEmail.remove(user.email.lowercase())
     }
 
     fun seed(user: AdminUser) {

@@ -6,6 +6,7 @@ import io.ktor.server.application.call
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
+import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.put
@@ -14,15 +15,18 @@ import io.ktor.server.routing.routing
 fun Application.installAdminUserRoutes(deps: GatewayDeps) {
     routing {
         post("/admin/users/invites") {
-            if (!call.requireUserInvite(deps)) return@post
+            val validated = call.requireUserInvite(deps) ?: return@post
+            val orgId = validated.orgId!!
             val request = call.receive<InviteUserRequest>()
             ProductFeatures.validate(request.features)?.let { error ->
                 call.respondText(error, status = HttpStatusCode.BadRequest)
                 return@post
             }
             try {
-                val user = deps.zitadelAdminClient.inviteUser(request)
-                call.respond(HttpStatusCode.Created, user)
+                TenantContext.withTenant(orgId) {
+                    val user = deps.zitadelAdminClient.inviteUser(request)
+                    call.respond(HttpStatusCode.Created, user)
+                }
             } catch (e: ZitadelAdminException) {
                 call.respondZitadelAdminException(e)
             } catch (_: UpstreamUnavailableException) {
@@ -31,12 +35,15 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
         }
 
         get("/admin/users") {
-            if (!call.requireUserInvite(deps)) return@get
+            val validated = call.requireUserInvite(deps) ?: return@get
+            val orgId = validated.orgId!!
             val limit = call.request.queryParameters["limit"]?.toIntOrNull()?.coerceIn(1, 100) ?: 50
             val offset = call.request.queryParameters["offset"]?.toIntOrNull()?.coerceAtLeast(0) ?: 0
             try {
-                val list = deps.zitadelAdminClient.listUsers(limit, offset)
-                call.respond(list)
+                TenantContext.withTenant(orgId) {
+                    val list = deps.zitadelAdminClient.listUsers(limit, offset)
+                    call.respond(list)
+                }
             } catch (e: ZitadelAdminException) {
                 call.respondZitadelAdminException(e)
             } catch (_: UpstreamUnavailableException) {
@@ -45,7 +52,8 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
         }
 
         put("/admin/users/{id}/features") {
-            if (!call.requireUserInvite(deps)) return@put
+            val validated = call.requireUserInvite(deps) ?: return@put
+            val orgId = validated.orgId!!
             val userId = call.parameters["id"] ?: run {
                 call.respondText("Bad Request", status = HttpStatusCode.BadRequest)
                 return@put
@@ -56,8 +64,10 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
                 return@put
             }
             try {
-                val user = deps.zitadelAdminClient.setFeatures(userId, request.features)
-                call.respond(user)
+                TenantContext.withTenant(orgId) {
+                    val user = deps.zitadelAdminClient.setFeatures(userId, request.features)
+                    call.respond(user)
+                }
             } catch (e: ZitadelAdminException) {
                 call.respondZitadelAdminException(e)
             } catch (_: UpstreamUnavailableException) {
@@ -66,13 +76,35 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
         }
 
         post("/admin/users/{id}/resend-invite") {
-            if (!call.requireUserInvite(deps)) return@post
+            val validated = call.requireUserInvite(deps) ?: return@post
+            val orgId = validated.orgId!!
             val userId = call.parameters["id"] ?: run {
                 call.respondText("Bad Request", status = HttpStatusCode.BadRequest)
                 return@post
             }
             try {
-                deps.zitadelAdminClient.resendInvite(userId)
+                TenantContext.withTenant(orgId) {
+                    deps.zitadelAdminClient.resendInvite(userId)
+                    call.respondText("", status = HttpStatusCode.NoContent)
+                }
+            } catch (e: ZitadelAdminException) {
+                call.respondZitadelAdminException(e)
+            } catch (_: UpstreamUnavailableException) {
+                call.respondText("Bad Gateway", status = HttpStatusCode.BadGateway)
+            }
+        }
+
+        delete("/admin/users/{id}") {
+            val validated = call.requireUserInvite(deps) ?: return@delete
+            val orgId = validated.orgId!!
+            val userId = call.parameters["id"] ?: run {
+                call.respondText("Bad Request", status = HttpStatusCode.BadRequest)
+                return@delete
+            }
+            try {
+                TenantContext.withTenant(orgId) {
+                    deps.zitadelAdminClient.deleteUser(userId)
+                }
                 call.respondText("", status = HttpStatusCode.NoContent)
             } catch (e: ZitadelAdminException) {
                 call.respondZitadelAdminException(e)

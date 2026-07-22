@@ -9,7 +9,7 @@ info:
     - `GET /auth/url` — куда открыть браузер для логина (страница Zitadel)
     - `POST /auth/token` — обмен code / refresh на токены (BFF → Zitadel)
     - `GET /me` — userInfo + features (нужен Bearer JWT)
-    - `/admin/users*` — invite / list / roles / resend (Bearer + feature `user_invite`)
+    - `/admin/users*` — invite / list / features / resend / revoke (Bearer + feature `user_invite`)
     - `/v1/*` — proxy в backend
 
 servers:
@@ -133,6 +133,7 @@ paths:
       description: |
         Creates a human user in Zitadel (invitation email) and assigns project feature grants.
         Caller must have feature `user_invite`.
+        Scoped to the caller's org from JWT claim `urn:zitadel:iam:org:id`.
       security:
         - bearerAuth: []
       requestBody:
@@ -156,7 +157,7 @@ paths:
         "400":
           description: Validation error or unknown feature (plain text)
         "401":
-          description: Missing or invalid JWT
+          description: Missing or invalid JWT / missing org claim
         "403":
           description: Authenticated but missing `user_invite` feature
         "409":
@@ -168,6 +169,8 @@ paths:
     get:
       operationId: getAdminUsers
       summary: List users in the product org
+      description: |
+        Scoped to the caller's org from JWT claim `urn:zitadel:iam:org:id`.
       security:
         - bearerAuth: []
       parameters:
@@ -192,7 +195,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/AdminUserList"
         "401":
-          description: Missing or invalid JWT
+          description: Missing or invalid JWT / missing org claim
         "403":
           description: Missing `user_invite` feature
         "502":
@@ -261,6 +264,36 @@ paths:
           description: Unknown user id (plain text)
         "409":
           description: User already active (plain text)
+        "502":
+          description: Zitadel Management API unavailable
+
+  /admin/users/{id}:
+    delete:
+      operationId: deleteAdminUserInvite
+      summary: Revoke invitation by deleting an invited user
+      description: |
+        Hard-deletes the user in Zitadel when state is `invited`.
+        Returns 409 if the user is already active (or otherwise not invited).
+        Scoped to the caller's org from JWT claim `urn:zitadel:iam:org:id`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Invitation revoked (user deleted)
+        "401":
+          description: Missing or invalid JWT / missing org claim
+        "403":
+          description: Missing `user_invite` feature
+        "404":
+          description: Unknown user id (plain text)
+        "409":
+          description: User is not in invited state (plain text)
         "502":
           description: Zitadel Management API unavailable
 
