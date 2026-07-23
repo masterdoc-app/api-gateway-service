@@ -30,7 +30,7 @@ ZITADEL_PROJECT_ID=<masterdoc-toir-project-id>
 ZITADEL_MGMT_TOKEN=<pat-with-user-and-grant-management>
 FEATURE_SERVICE_BASE_URL=http://127.0.0.1:8082
 BACKEND_BASE_URL=http://127.0.0.1:8081
-CORS_ORIGINS=https://app.fixaverse.ru,https://copilot.fixaverse.ru,https://copilot.formaverse.ru,https://copilot.masterdoc.pro,http://localhost:8080
+CORS_ORIGINS=https://app.fixaverse.ru,https://copilot.fixaverse.ru,https://copilot.masterdoc.pro,http://localhost:8080
 ```
 
 Green slot uses `PORT=8084` via compose.
