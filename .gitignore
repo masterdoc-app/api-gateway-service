@@ -1,7 +1,9 @@
-.gradle/
-build/
-out/
 *.iml
-.idea/
-.env
 *.log
+.env
+.gradle/
+.idea/
+bin/
+build/
+local.properties
+out/
