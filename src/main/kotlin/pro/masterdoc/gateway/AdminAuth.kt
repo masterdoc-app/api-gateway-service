@@ -64,3 +64,52 @@ suspend fun ApplicationCall.requireUserInvite(deps: GatewayDeps): ValidatedToken
     }
     return validated
 }
+
+suspend fun ApplicationCall.requireFeature(deps: GatewayDeps, feature: String): Boolean =
+    requireAnyFeature(deps, listOf(feature))
+
+suspend fun ApplicationCall.requireAnyFeature(deps: GatewayDeps, features: List<String>): Boolean {
+    val authorization = request.header(HttpHeaders.Authorization)
+    if (authorization.isNullOrBlank() || !authorization.startsWith("Bearer ")) {
+        respondText("Unauthorized", status = HttpStatusCode.Unauthorized)
+        return false
+    }
+    val token = authorization.removePrefix("Bearer ").trim()
+    val validated = if (token.isEmpty()) null else deps.tokenValidator.validate(token)
+    if (validated == null) {
+        respondText("Unauthorized", status = HttpStatusCode.Unauthorized)
+        return false
+    }
+    val upstream =
+        try {
+            deps.featureClient.getMe(authorization)
+        } catch (_: UpstreamUnavailableException) {
+            respondText("Bad Gateway", status = HttpStatusCode.BadGateway)
+            return false
+        }
+    if (upstream.status != HttpStatusCode.OK) {
+        respondText("Bad Gateway", status = HttpStatusCode.BadGateway)
+        return false
+    }
+    val granted =
+        runCatching {
+            adminAuthJson
+                .parseToJsonElement(String(upstream.body))
+                .jsonObject["features"]
+                ?.jsonArray
+                ?.map { it.jsonPrimitive.content }
+                ?: emptyList()
+        }.getOrDefault(emptyList())
+    if (features.none { it in granted }) {
+        respondText("Forbidden", status = HttpStatusCode.Forbidden)
+        return false
+    }
+    attributes.put(OrgIdKey, validated.orgId?.takeIf { it.isNotBlank() } ?: "default-org")
+    attributes.put(UserIdKey, validated.subject)
+    attributes.put(AuthHeaderKey, authorization)
+    return true
+}
+
+val OrgIdKey = io.ktor.util.AttributeKey<String>("orgId")
+val UserIdKey = io.ktor.util.AttributeKey<String>("userId")
+val AuthHeaderKey = io.ktor.util.AttributeKey<String>("authHeader")

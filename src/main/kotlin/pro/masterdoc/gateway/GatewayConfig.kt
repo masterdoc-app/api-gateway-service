@@ -9,6 +9,9 @@ data class GatewayConfig(
     val featureServiceBaseUrl: String,
     val backendBaseUrl: String,
     val catalogServiceBaseUrl: String,
+    val dashboardServiceBaseUrl: String,
+    val documentServiceBaseUrl: String,
+    val technologistServiceBaseUrl: String,
     val blackBoxServiceBaseUrl: String,
     val blackBoxInternalToken: String,
     val corsOrigins: List<String>,
@@ -26,10 +29,13 @@ data class GatewayConfig(
                 featureServiceBaseUrl =
                     System.getenv("FEATURE_SERVICE_BASE_URL") ?: "http://127.0.0.1:8082",
                 backendBaseUrl = System.getenv("BACKEND_BASE_URL") ?: "http://127.0.0.1:8081",
-                catalogServiceBaseUrl =
-                    System.getenv("CATALOG_SERVICE_BASE_URL") ?: "http://127.0.0.1:8091",
+                catalogServiceBaseUrl = System.getenv("CATALOG_SERVICE_BASE_URL") ?: "http://127.0.0.1:8091",
+                dashboardServiceBaseUrl = System.getenv("DASHBOARD_SERVICE_BASE_URL") ?: "http://127.0.0.1:8092",
+                documentServiceBaseUrl = System.getenv("DOCUMENT_SERVICE_BASE_URL") ?: "http://127.0.0.1:8093",
+                technologistServiceBaseUrl =
+                    System.getenv("TECHNOLOGIST_SERVICE_BASE_URL") ?: "http://127.0.0.1:8095",
                 blackBoxServiceBaseUrl =
-                    System.getenv("BLACK_BOX_SERVICE_BASE_URL") ?: "http://127.0.0.1:8095",
+                    System.getenv("BLACK_BOX_SERVICE_BASE_URL") ?: "http://127.0.0.1:8096",
                 blackBoxInternalToken = System.getenv("BLACK_BOX_INTERNAL_TOKEN") ?: "",
                 corsOrigins =
                     (System.getenv("CORS_ORIGINS") ?: "http://localhost:8080")
@@ -48,6 +54,9 @@ data class GatewayConfig(
                 featureServiceBaseUrl = "http://feature.test",
                 backendBaseUrl = "http://backend.test",
                 catalogServiceBaseUrl = "http://catalog.test",
+                dashboardServiceBaseUrl = "http://dashboard.test",
+                documentServiceBaseUrl = "http://document.test",
+                technologistServiceBaseUrl = "http://technologist.test",
                 blackBoxServiceBaseUrl = "http://blackbox.test",
                 blackBoxInternalToken = "",
                 corsOrigins = listOf("http://localhost:8080"),

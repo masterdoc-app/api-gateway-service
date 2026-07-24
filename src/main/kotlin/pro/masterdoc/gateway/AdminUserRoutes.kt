@@ -18,7 +18,7 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
             val validated = call.requireUserInvite(deps) ?: return@post
             val orgId = validated.orgId!!
             val request = call.receive<InviteUserRequest>()
-            ProductRoles.validate(request.roles)?.let { error ->
+            ProductFeatures.validate(request.features)?.let { error ->
                 call.respondText(error, status = HttpStatusCode.BadRequest)
                 return@post
             }
@@ -72,21 +72,21 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
             }
         }
 
-        put("/admin/users/{id}/roles") {
+        put("/admin/users/{id}/features") {
             val validated = call.requireUserInvite(deps) ?: return@put
             val orgId = validated.orgId!!
             val userId = call.parameters["id"] ?: run {
                 call.respondText("Bad Request", status = HttpStatusCode.BadRequest)
                 return@put
             }
-            val request = call.receive<SetRolesRequest>()
-            ProductRoles.validate(request.roles)?.let { error ->
+            val request = call.receive<SetFeaturesRequest>()
+            ProductFeatures.validate(request.features)?.let { error ->
                 call.respondText(error, status = HttpStatusCode.BadRequest)
                 return@put
             }
             try {
                 TenantContext.withTenant(orgId) {
-                    val user = deps.zitadelAdminClient.setRoles(userId, request.roles)
+                    val user = deps.zitadelAdminClient.setFeatures(userId, request.features)
                     call.respond(user)
                     deps.blackBoxClient.recordAsync(
                         CreateAuditEventRequest(
@@ -140,6 +140,10 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
             val orgId = validated.orgId!!
             val userId = call.parameters["id"] ?: run {
                 call.respondText("Bad Request", status = HttpStatusCode.BadRequest)
+                return@delete
+            }
+            if (userId == validated.subject) {
+                call.respondText("cannot delete yourself", status = HttpStatusCode.Conflict)
                 return@delete
             }
             try {

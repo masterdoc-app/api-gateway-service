@@ -1,0 +1,80 @@
+name: Ensure Mgmt PAT Org Member
+
+on:
+  workflow_dispatch:
+    inputs:
+      extra_org_ids:
+        description: Space-separated client org ids
+        required: true
+        default: "382715225649971203"
+      roles:
+        description: Org member roles for ZITADEL_MGMT_TOKEN user
+        required: true
+        default: ORG_OWNER
+
+concurrency:
+  group: ensure-mgmt-org-member-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  ensure:
+    name: Grant org roles to gateway PAT
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Verify secrets
+        env:
+          TOKEN: ${{ secrets.ZITADEL_MGMT_TOKEN }}
+        run: |
+          test -n "$TOKEN" || { echo "Add secret ZITADEL_MGMT_TOKEN"; exit 1; }
+
+      - name: Ensure org membership for gateway PAT
+        env:
+          ZITADEL_DOMAIN: auth.fixaverse.ru
+          ZITADEL_TOKEN: ${{ secrets.ZITADEL_MGMT_TOKEN }}
+          EXTRA_ORG_IDS: ${{ inputs.extra_org_ids }}
+          MGMT_ORG_ROLES: ${{ inputs.roles }}
+        run: |
+          set -euo pipefail
+          API="https://${ZITADEL_DOMAIN}"
+          auth_curl() {
+            local method="$1" path="$2"; shift 2
+            curl -sS -o /tmp/zitadel-body.json -w '%{http_code}' \
+              -H "Authorization: Bearer ${ZITADEL_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -X "$method" "${API}${path}" "$@"
+          }
+          mgmt_curl() {
+            local org_id="$1" method="$2" path="$3"; shift 3
+            curl -sS -o /tmp/zitadel-body.json -w '%{http_code}' \
+              -H "Authorization: Bearer ${ZITADEL_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -H "x-zitadel-orgid: ${org_id}" \
+              -X "$method" "${API}${path}" "$@"
+          }
+
+          echo "==> Resolve PAT user id"
+          CODE="$(auth_curl GET /auth/v1/users/me)"
+          [[ "$CODE" == "200" ]] || { echo "GetMyUser failed ($CODE): $(cat /tmp/zitadel-body.json)"; exit 1; }
+          USER_ID="$(python3 -c 'import json; print((json.load(open("/tmp/zitadel-body.json")).get("user") or {}).get("id") or "")')"
+          USER_NAME="$(python3 -c 'import json; u=json.load(open("/tmp/zitadel-body.json")).get("user") or {}; print(u.get("userName") or "")')"
+          echo "USER_ID=$USER_ID USER_NAME=$USER_NAME"
+          [[ -n "$USER_ID" ]] || exit 1
+
+          ROLES_JSON="$(python3 -c 'import json,os; print(json.dumps(os.environ["MGMT_ORG_ROLES"].split()))')"
+          for org_id in $EXTRA_ORG_IDS; do
+            echo "==> Org member org=$org_id roles=$MGMT_ORG_ROLES"
+            BODY="$(USER_ID="$USER_ID" ROLES_JSON="$ROLES_JSON" python3 -c 'import json,os; print(json.dumps({"userId":os.environ["USER_ID"],"roles":json.loads(os.environ["ROLES_JSON"])}))')"
+            CODE="$(mgmt_curl "$org_id" POST /management/v1/orgs/me/members/_search -d "$(USER_ID="$USER_ID" python3 -c 'import json,os; print(json.dumps({"query":{"offset":0,"limit":100,"asc":True},"queries":[{"userIdQuery":{"userId":os.environ["USER_ID"]}}]}))')")"
+            [[ "$CODE" == "200" ]] || { echo "ListOrgMembers failed ($CODE): $(cat /tmp/zitadel-body.json)"; exit 1; }
+            EXISTS="$(USER_ID="$USER_ID" python3 -c 'import json,os; uid=os.environ["USER_ID"]; print("yes" if any(m.get("userId")==uid for m in (json.load(open("/tmp/zitadel-body.json")).get("result") or [])) else "no")')"
+            if [[ "$EXISTS" == "yes" ]]; then
+              CODE="$(mgmt_curl "$org_id" PUT "/management/v1/orgs/me/members/${USER_ID}" -d "$BODY")"
+            else
+              CODE="$(mgmt_curl "$org_id" POST /management/v1/orgs/me/members -d "$BODY")"
+            fi
+            [[ "$CODE" == "200" || "$CODE" == "201" ]] || { echo "Member upsert failed ($CODE): $(cat /tmp/zitadel-body.json)"; exit 1; }
+            echo "OK org=$org_id"
+          done
+          echo Done.

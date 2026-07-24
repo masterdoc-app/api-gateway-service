@@ -40,8 +40,9 @@ fun Application.module(
     installAuthUrlRoutes(config)
     installAuthTokenRoutes(deps)
     installMeRoutes(deps)
+    installFeaturesRoutes(deps)
     installV1ProxyRoutes(deps)
-    installCatalogProxyRoutes(deps)
+    installEquipmentRoutes(config, deps)
     installAdminUserRoutes(deps)
     installAdminAuditRoutes(deps)
 }
@@ -49,9 +50,6 @@ fun Application.module(
 data class GatewayDeps(
     val featureClient: FeatureServiceClient,
     val backendClient: BackendProxyClient,
-    val catalogClient: BackendProxyClient = BackendProxyClient { _, _, _, _ ->
-        throw UpstreamUnavailableException("catalog client not configured")
-    },
     val blackBoxClient: BlackBoxClient = BlackBoxClient.noop(),
     val tokenValidator: TokenValidator,
     val zitadelTokenClient: ZitadelTokenClient =
@@ -63,7 +61,6 @@ data class GatewayDeps(
             GatewayDeps(
                 featureClient = FeatureServiceClient.http(config.featureServiceBaseUrl),
                 backendClient = BackendProxyClient.http(config.backendBaseUrl),
-                catalogClient = BackendProxyClient.http(config.catalogServiceBaseUrl),
                 blackBoxClient =
                     BlackBoxClient.http(
                         config.blackBoxServiceBaseUrl,

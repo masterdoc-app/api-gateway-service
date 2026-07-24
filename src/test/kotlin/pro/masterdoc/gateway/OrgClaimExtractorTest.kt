@@ -12,8 +12,25 @@ class OrgClaimExtractorTest {
     }
 
     @Test
+    fun `reads resourceowner id when org id missing`() {
+        val claims = mapOf("urn:zitadel:iam:user:resourceowner:id" to "382715225649971203")
+        assertEquals("382715225649971203", OrgClaimExtractor.orgIdFrom(claims))
+    }
+
+    @Test
+    fun `prefers org id over resourceowner`() {
+        val claims =
+            mapOf(
+                "urn:zitadel:iam:org:id" to "org-preferred",
+                "urn:zitadel:iam:user:resourceowner:id" to "org-home",
+            )
+        assertEquals("org-preferred", OrgClaimExtractor.orgIdFrom(claims))
+    }
+
+    @Test
     fun `blank or missing org claim returns null`() {
         assertNull(OrgClaimExtractor.orgIdFrom(emptyMap()))
         assertNull(OrgClaimExtractor.orgIdFrom(mapOf("urn:zitadel:iam:org:id" to "  ")))
+        assertNull(OrgClaimExtractor.orgIdFrom(mapOf("urn:zitadel:iam:user:resourceowner:id" to "  ")))
     }
 }

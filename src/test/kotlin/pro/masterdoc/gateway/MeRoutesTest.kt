@@ -33,7 +33,7 @@ class MeRoutesTest {
     @Test
     fun `GET me with valid token proxies feature-service body`() = testApplication {
         val upstreamJson =
-            """{"userInfo":{"id":"u1","givenName":"Ivan","familyName":"Petrov","email":"i@e.com","roles":["dispatcher"]},"features":["board"]}"""
+            """{"userInfo":{"id":"u1","givenName":"Ivan","familyName":"Petrov","email":"i@e.com"},"features":["board"]}"""
         application {
             module(
                 GatewayConfig.testDefaults(),

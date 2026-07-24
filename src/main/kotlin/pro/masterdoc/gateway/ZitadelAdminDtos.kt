@@ -58,6 +58,30 @@ internal data class ZitadelHumanEmail(
 )
 
 @Serializable
+internal data class ZitadelV2GetUserResponse(
+    val user: ZitadelV2User? = null,
+)
+
+@Serializable
+internal data class ZitadelV2User(
+    @SerialName("userId") val userId: String? = null,
+    val state: String? = null,
+    val human: ZitadelV2Human? = null,
+)
+
+@Serializable
+internal data class ZitadelV2Human(
+    val profile: ZitadelHumanProfile? = null,
+    val email: ZitadelV2Email? = null,
+)
+
+@Serializable
+internal data class ZitadelV2Email(
+    val email: String? = null,
+    @SerialName("isVerified") val isVerified: Boolean? = null,
+)
+
+@Serializable
 internal data class ZitadelGrantsSearchResponse(
     val result: List<ZitadelUserGrant> = emptyList(),
 )
@@ -87,7 +111,7 @@ internal data class ZitadelUpdateGrantRequest(
 internal object ZitadelAdminMapping {
     fun toAdminUser(
         user: ZitadelManagementUser,
-        roles: List<String>,
+        features: List<String>,
         includeInviteSent: Boolean,
         inviteSent: Boolean = true,
     ): AdminUser {
@@ -98,7 +122,7 @@ internal object ZitadelAdminMapping {
             email = human?.email?.email.orEmpty(),
             givenName = profile?.resolvedGivenName().orEmpty(),
             familyName = profile?.resolvedFamilyName().orEmpty(),
-            roles = roles,
+            features = features,
             state = UserStateMapper.fromZitadel(user.state, human?.email?.isEmailVerified),
             inviteSent = inviteSent.takeIf { includeInviteSent },
         )
@@ -115,7 +139,7 @@ internal object ZitadelAdminMapping {
             email = grant.email.orEmpty(),
             givenName = grant.firstName.orEmpty(),
             familyName = grant.lastName.orEmpty(),
-            roles = grant.roleKeys,
+            features = grant.roleKeys,
             state = state,
             inviteSent = inviteSent.takeIf { includeInviteSent },
         )
