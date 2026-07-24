@@ -73,7 +73,7 @@ Env file on VPS is not committed. Deploy job upserts the two `ZITADEL_*` admin v
 6. Smoke: `curl -sS https://api.masterdoc.pro/health` and `/auth/url` (must be 200, not 404).
 7. Further deploys: **only** `deploy/blue-green.sh` (never bare `compose up` for prod).
 
-**Never** re-run `backend/deploy/install-api-nginx.sh` after cutover — it overwrites the site to `:8081` and breaks `/auth/url` / `/me` for the Wasm client. That script now refuses when `/etc/nginx/api-upstream.conf` exists.
+**Never** re-run `backend/deploy/install-api-nginx.sh` after cutover — historically it overwrote the site to `:8081` and broke `/auth/url` / `/me` for the Wasm client. That script now **skips** (exit 0) when `/etc/nginx/api-upstream.conf` exists.
 
 ## Blue-green
 
