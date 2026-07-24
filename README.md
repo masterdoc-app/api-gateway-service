@@ -9,6 +9,8 @@ Ktor gateway — **единственный API URL** для клиентов: `
 | `POST /auth/token` | — | BFF → Zitadel `/oauth/v2/token` |
 | `GET /me` | Bearer Zitadel JWT | feature-service `:8082` |
 | `/v1/*` | passthrough | backend `:8081` |
+| `/sites`, `/assets` | Bearer JWT | catalog-service `:8091` (+ audit → black-box) |
+| `GET /admin/audit` | Bearer + `user_invite` | black-box-service `:8095` |
 
 Клиент знает только gateway. Логин UI — Zitadel; обмен code/refresh — `POST /auth/token`.
 

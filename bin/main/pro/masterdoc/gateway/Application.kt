@@ -41,37 +41,22 @@ fun Application.module(
     installAuthTokenRoutes(deps)
     installMeRoutes(deps)
     installV1ProxyRoutes(deps)
-    installCatalogProxyRoutes(deps)
-    installAdminUserRoutes(deps)
-    installAdminAuditRoutes(deps)
 }
 
 data class GatewayDeps(
     val featureClient: FeatureServiceClient,
     val backendClient: BackendProxyClient,
-    val catalogClient: BackendProxyClient = BackendProxyClient { _, _, _, _ ->
-        throw UpstreamUnavailableException("catalog client not configured")
-    },
-    val blackBoxClient: BlackBoxClient = BlackBoxClient.noop(),
     val tokenValidator: TokenValidator,
     val zitadelTokenClient: ZitadelTokenClient =
         ZitadelTokenClient { throw UpstreamUnavailableException("zitadel token client not configured") },
-    val zitadelAdminClient: ZitadelAdminClient = ZitadelAdminClient.unconfigured(),
 ) {
     companion object {
         fun live(config: GatewayConfig): GatewayDeps =
             GatewayDeps(
                 featureClient = FeatureServiceClient.http(config.featureServiceBaseUrl),
                 backendClient = BackendProxyClient.http(config.backendBaseUrl),
-                catalogClient = BackendProxyClient.http(config.catalogServiceBaseUrl),
-                blackBoxClient =
-                    BlackBoxClient.http(
-                        config.blackBoxServiceBaseUrl,
-                        config.blackBoxInternalToken.takeIf { it.isNotBlank() },
-                    ),
                 tokenValidator = TokenValidator.jwks(config.zitadelIssuer, config.zitadelJwkSetUri),
                 zitadelTokenClient = ZitadelTokenClient.http(config.zitadelIssuer),
-                zitadelAdminClient = ZitadelAdminClient.http(config),
             )
     }
 }
