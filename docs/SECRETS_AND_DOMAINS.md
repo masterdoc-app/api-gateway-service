@@ -70,8 +70,10 @@ Env file on VPS is not committed. Deploy job upserts the two `ZITADEL_*` admin v
 3. First gateway blue on `:8083`; `api-upstream.conf` → `127.0.0.1:8083`.
 4. Point `api.masterdoc.pro` nginx `proxy_pass` at upstream include (not straight to 8081).
 5. `nginx -t && systemctl reload nginx`.
-6. Smoke: `curl -sS https://api.masterdoc.pro/health` and `/v1/assistants`.
+6. Smoke: `curl -sS https://api.masterdoc.pro/health` and `/auth/url` (must be 200, not 404).
 7. Further deploys: **only** `deploy/blue-green.sh` (never bare `compose up` for prod).
+
+**Never** re-run `backend/deploy/install-api-nginx.sh` after cutover — historically it overwrote the site to `:8081` and broke `/auth/url` / `/me` for the Wasm client. That script now **skips** (exit 0) when `/etc/nginx/api-upstream.conf` exists.
 
 ## Blue-green
 

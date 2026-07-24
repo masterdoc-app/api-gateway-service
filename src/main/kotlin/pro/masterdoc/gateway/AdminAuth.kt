@@ -16,7 +16,7 @@ private val adminAuthJson =
         isLenient = true
     }
 
-suspend fun ApplicationCall.requireUserInvite(deps: GatewayDeps): ValidatedToken? {
+suspend fun ApplicationCall.requireAuthenticated(deps: GatewayDeps): ValidatedToken? {
     val authorization = request.header(HttpHeaders.Authorization)
     if (authorization.isNullOrBlank() || !authorization.startsWith("Bearer ")) {
         respondText("Unauthorized", status = HttpStatusCode.Unauthorized)
@@ -32,6 +32,12 @@ suspend fun ApplicationCall.requireUserInvite(deps: GatewayDeps): ValidatedToken
         respondText("Unauthorized", status = HttpStatusCode.Unauthorized)
         return null
     }
+    return validated
+}
+
+suspend fun ApplicationCall.requireUserInvite(deps: GatewayDeps): ValidatedToken? {
+    val validated = requireAuthenticated(deps) ?: return null
+    val authorization = request.header(HttpHeaders.Authorization)!!
     val upstream =
         try {
             deps.featureClient.getMe(authorization)
@@ -59,14 +65,18 @@ suspend fun ApplicationCall.requireUserInvite(deps: GatewayDeps): ValidatedToken
     return validated
 }
 
-suspend fun ApplicationCall.requireFeature(deps: GatewayDeps, feature: String): Boolean {
+suspend fun ApplicationCall.requireFeature(deps: GatewayDeps, feature: String): Boolean =
+    requireAnyFeature(deps, listOf(feature))
+
+suspend fun ApplicationCall.requireAnyFeature(deps: GatewayDeps, features: List<String>): Boolean {
     val authorization = request.header(HttpHeaders.Authorization)
     if (authorization.isNullOrBlank() || !authorization.startsWith("Bearer ")) {
         respondText("Unauthorized", status = HttpStatusCode.Unauthorized)
         return false
     }
     val token = authorization.removePrefix("Bearer ").trim()
-    if (token.isEmpty() || deps.tokenValidator.validate(token) == null) {
+    val validated = if (token.isEmpty()) null else deps.tokenValidator.validate(token)
+    if (validated == null) {
         respondText("Unauthorized", status = HttpStatusCode.Unauthorized)
         return false
     }
@@ -81,7 +91,7 @@ suspend fun ApplicationCall.requireFeature(deps: GatewayDeps, feature: String): 
         respondText("Bad Gateway", status = HttpStatusCode.BadGateway)
         return false
     }
-    val features =
+    val granted =
         runCatching {
             adminAuthJson
                 .parseToJsonElement(String(upstream.body))
@@ -90,14 +100,16 @@ suspend fun ApplicationCall.requireFeature(deps: GatewayDeps, feature: String): 
                 ?.map { it.jsonPrimitive.content }
                 ?: emptyList()
         }.getOrDefault(emptyList())
-    if (feature !in features) {
+    if (features.none { it in granted }) {
         respondText("Forbidden", status = HttpStatusCode.Forbidden)
         return false
     }
-    attributes.put(OrgIdKey, "default-org")
+    attributes.put(OrgIdKey, validated.orgId?.takeIf { it.isNotBlank() } ?: "default-org")
+    attributes.put(UserIdKey, validated.subject)
     attributes.put(AuthHeaderKey, authorization)
     return true
 }
 
 val OrgIdKey = io.ktor.util.AttributeKey<String>("orgId")
+val UserIdKey = io.ktor.util.AttributeKey<String>("userId")
 val AuthHeaderKey = io.ktor.util.AttributeKey<String>("authHeader")

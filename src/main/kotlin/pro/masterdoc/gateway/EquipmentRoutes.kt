@@ -27,10 +27,11 @@ import kotlinx.io.readByteArray
 fun Application.installEquipmentRoutes(config: GatewayConfig, deps: GatewayDeps) {
     val client = HttpClient(CIO)
     routing {
-        proxyPrefix("/assets", config.catalogServiceBaseUrl, client, deps)
-        proxyPrefix("/maintenance-maps", config.dashboardServiceBaseUrl, client, deps)
-        proxyPrefix("/documents", config.documentServiceBaseUrl, client, deps)
-        proxyPrefix("/ai/technologist", config.technologistServiceBaseUrl, client, deps)
+        proxyPrefix("/sites", config.catalogServiceBaseUrl, client, deps, features = listOf("equipment", "user_invite"))
+        proxyPrefix("/assets", config.catalogServiceBaseUrl, client, deps, features = listOf("equipment"))
+        proxyPrefix("/maintenance-maps", config.dashboardServiceBaseUrl, client, deps, features = listOf("equipment", "charts"))
+        proxyPrefix("/documents", config.documentServiceBaseUrl, client, deps, features = listOf("equipment"))
+        proxyPrefix("/ai/technologist", config.technologistServiceBaseUrl, client, deps, features = listOf("equipment"))
     }
 }
 
@@ -39,17 +40,18 @@ private fun io.ktor.server.routing.Routing.proxyPrefix(
     baseUrl: String,
     client: HttpClient,
     deps: GatewayDeps,
+    features: List<String>,
 ) {
     route(prefix) {
         route("{tail...}") {
             handle {
-                if (!call.requireFeature(deps, "equipment")) return@handle
-                forward(client, baseUrl, call.request.uri, call)
+                if (!call.requireAnyFeature(deps, features)) return@handle
+                forward(client, baseUrl, call.request.uri, call, deps)
             }
         }
         handle {
-            if (!call.requireFeature(deps, "equipment")) return@handle
-            forward(client, baseUrl, call.request.uri, call)
+            if (!call.requireAnyFeature(deps, features)) return@handle
+            forward(client, baseUrl, call.request.uri, call, deps)
         }
     }
 }
@@ -59,8 +61,10 @@ private suspend fun forward(
     baseUrl: String,
     uri: String,
     call: io.ktor.server.application.ApplicationCall,
+    deps: GatewayDeps,
 ) {
     val orgId = call.attributes.getOrNull(OrgIdKey) ?: "default-org"
+    val userId = call.attributes.getOrNull(UserIdKey) ?: "unknown"
     val method = call.request.httpMethod
     val bodyBytes =
         if (method in setOf(HttpMethod.Post, HttpMethod.Put, HttpMethod.Patch)) {
@@ -73,7 +77,7 @@ private suspend fun forward(
             client.request("$baseUrl$uri") {
                 this.method = method
                 header("X-Org-Id", orgId)
-                call.request.header("X-User-Id")?.let { header("X-User-Id", it) }
+                header("X-User-Id", userId)
                 if (bodyBytes != null) {
                     val contentTypeHeader = call.request.header(HttpHeaders.ContentType)
                     val contentType =
@@ -82,11 +86,40 @@ private suspend fun forward(
                     setBody(ByteArrayContent(bodyBytes, contentType))
                 }
             }
+        val responseBody = upstream.bodyAsBytes()
         val contentType =
             upstream.headers[HttpHeaders.ContentType]?.let { ContentType.parse(it) }
                 ?: ContentType.Application.Json
-        call.respondBytes(upstream.bodyAsBytes(), contentType, upstream.status)
+        call.respondBytes(responseBody, contentType, upstream.status)
+        if (upstream.status.value in 200..299) {
+            deps.blackBoxClient.recordAsync(
+                CreateAuditEventRequest(
+                    orgId = orgId,
+                    userId = userId,
+                    method = method.value,
+                    path = uri.substringBefore('?'),
+                    status = upstream.status.value,
+                    action = equipmentAction(method, uri),
+                    requestSummary = summarizeBody(bodyBytes),
+                    responseSummary = summarizeBody(responseBody),
+                ),
+            )
+        }
     } catch (_: Exception) {
         call.respondText("Bad Gateway", status = HttpStatusCode.BadGateway)
+    }
+}
+
+private fun equipmentAction(method: HttpMethod, uri: String): String {
+    val path = uri.substringBefore('?')
+    return when {
+        method == HttpMethod.Post && path == "/sites" -> "site.create"
+        (method == HttpMethod.Put || method == HttpMethod.Patch) && path.startsWith("/sites/") -> "site.update"
+        method == HttpMethod.Delete && path.startsWith("/sites/") -> "site.delete"
+        method == HttpMethod.Post && path == "/assets" -> "asset.create"
+        method == HttpMethod.Post && path.endsWith("/move") -> "asset.move"
+        method == HttpMethod.Post && path.endsWith("/confirm") -> "asset.confirm"
+        method == HttpMethod.Post && path.endsWith("/reject") -> "asset.reject"
+        else -> "${method.value.lowercase()}:${path}"
     }
 }

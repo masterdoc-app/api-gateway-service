@@ -26,6 +26,17 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
                 TenantContext.withTenant(orgId) {
                     val user = deps.zitadelAdminClient.inviteUser(request)
                     call.respond(HttpStatusCode.Created, user)
+                    deps.blackBoxClient.recordAsync(
+                        CreateAuditEventRequest(
+                            orgId = orgId,
+                            userId = validated.subject,
+                            method = "POST",
+                            path = "/admin/users/invites",
+                            status = 201,
+                            action = "admin.invite",
+                            requestSummary = """{"email":"${request.email}"}""",
+                        ),
+                    )
                 }
             } catch (e: ZitadelAdminException) {
                 call.respondZitadelAdminException(e)
@@ -43,6 +54,16 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
                 TenantContext.withTenant(orgId) {
                     val list = deps.zitadelAdminClient.listUsers(limit, offset)
                     call.respond(list)
+                    deps.blackBoxClient.recordAsync(
+                        CreateAuditEventRequest(
+                            orgId = orgId,
+                            userId = validated.subject,
+                            method = "GET",
+                            path = "/admin/users",
+                            status = 200,
+                            action = "admin.users.list",
+                        ),
+                    )
                 }
             } catch (e: ZitadelAdminException) {
                 call.respondZitadelAdminException(e)
@@ -67,6 +88,16 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
                 TenantContext.withTenant(orgId) {
                     val user = deps.zitadelAdminClient.setFeatures(userId, request.features)
                     call.respond(user)
+                    deps.blackBoxClient.recordAsync(
+                        CreateAuditEventRequest(
+                            orgId = orgId,
+                            userId = validated.subject,
+                            method = "PUT",
+                            path = "/admin/users/$userId/roles",
+                            status = 200,
+                            action = "admin.roles.set",
+                        ),
+                    )
                 }
             } catch (e: ZitadelAdminException) {
                 call.respondZitadelAdminException(e)
@@ -86,6 +117,16 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
                 TenantContext.withTenant(orgId) {
                     deps.zitadelAdminClient.resendInvite(userId)
                     call.respondText("", status = HttpStatusCode.NoContent)
+                    deps.blackBoxClient.recordAsync(
+                        CreateAuditEventRequest(
+                            orgId = orgId,
+                            userId = validated.subject,
+                            method = "POST",
+                            path = "/admin/users/$userId/resend-invite",
+                            status = 204,
+                            action = "admin.invite.resend",
+                        ),
+                    )
                 }
             } catch (e: ZitadelAdminException) {
                 call.respondZitadelAdminException(e)
@@ -110,6 +151,16 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
                     deps.zitadelAdminClient.deleteUser(userId)
                 }
                 call.respondText("", status = HttpStatusCode.NoContent)
+                deps.blackBoxClient.recordAsync(
+                    CreateAuditEventRequest(
+                        orgId = orgId,
+                        userId = validated.subject,
+                        method = "DELETE",
+                        path = "/admin/users/$userId",
+                        status = 204,
+                        action = "admin.user.delete",
+                    ),
+                )
             } catch (e: ZitadelAdminException) {
                 call.respondZitadelAdminException(e)
             } catch (_: UpstreamUnavailableException) {
