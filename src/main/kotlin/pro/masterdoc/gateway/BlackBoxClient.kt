@@ -20,7 +20,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
 
-fun interface BlackBoxClient {
+interface BlackBoxClient {
     suspend fun postEvent(event: CreateAuditEventRequest)
 
     suspend fun listEvents(
