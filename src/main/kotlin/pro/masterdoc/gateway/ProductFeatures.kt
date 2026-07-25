@@ -24,7 +24,7 @@ object ProductFeatures {
             FeatureDefinitionDto("charts", "ППР"),
             FeatureDefinitionDto("copilot", "Наставник"),
             FeatureDefinitionDto("equipment", "Оборудование"),
-            FeatureDefinitionDto("user_invite", "Пользователи"),
+            FeatureDefinitionDto("user_invite", "Админ"),
         )
 
     val ALL: Set<String> = ENTRIES.map { it.id }.toSet()
