@@ -30,6 +30,7 @@ fun Application.installEquipmentRoutes(config: GatewayConfig, deps: GatewayDeps)
         proxyPrefix("/sites", config.catalogServiceBaseUrl, client, deps, features = listOf("equipment", "user_invite"))
         proxyPrefix("/assets", config.catalogServiceBaseUrl, client, deps, features = listOf("equipment"))
         proxyPrefix("/maintenance-maps", config.dashboardServiceBaseUrl, client, deps, features = listOf("equipment", "charts"))
+        proxyPrefix("/work-orders", config.dashboardServiceBaseUrl, client, deps, features = listOf("board"))
         proxyPrefix("/documents", config.documentServiceBaseUrl, client, deps, features = listOf("equipment"))
         proxyPrefix("/ai/technologist", config.technologistServiceBaseUrl, client, deps, features = listOf("equipment"))
     }
