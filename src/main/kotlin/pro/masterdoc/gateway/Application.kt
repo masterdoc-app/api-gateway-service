@@ -45,6 +45,7 @@ fun Application.module(
     installEquipmentRoutes(config, deps)
     installAdminUserRoutes(deps)
     installAdminAuditRoutes(deps)
+    installClientEventsRoutes(deps)
 }
 
 data class GatewayDeps(
