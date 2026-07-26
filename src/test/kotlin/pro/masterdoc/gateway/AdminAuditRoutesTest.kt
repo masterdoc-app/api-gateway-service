@@ -8,6 +8,9 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.server.testing.testApplication
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -23,6 +26,26 @@ class AdminAuditRoutesTest {
                     .toByteArray(),
             )
         }
+
+    private class RecordingBlackBox : BlackBoxClient {
+        val events = mutableListOf<CreateAuditEventRequest>()
+
+        override suspend fun postEvent(event: CreateAuditEventRequest) {
+            synchronized(events) { events += event }
+        }
+
+        override suspend fun listEvents(
+            orgId: String,
+            userId: String?,
+            limit: Int,
+            offset: Int,
+        ): UpstreamResult =
+            UpstreamResult(
+                HttpStatusCode.OK,
+                "application/json",
+                """{"items":[]}""".toByteArray(),
+            )
+    }
 
     @Test
     fun `GET admin audit requires black_box not admin`() =
@@ -91,5 +114,38 @@ class AdminAuditRoutesTest {
             assertEquals(30, seenLimit)
             assertEquals(30, seenOffset)
             assertEquals("u9", seenUserId)
+        }
+
+    @Test
+    fun `GET admin audit skips audit_list append when offset greater than zero`() =
+        testApplication {
+            val box = RecordingBlackBox()
+            application {
+                module(
+                    GatewayConfig.testDefaults(),
+                    GatewayDeps(
+                        featureClient = featureClientWith("black_box"),
+                        backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
+                        blackBoxClient = box,
+                        tokenValidator = TokenValidator.accepting(),
+                    ),
+                )
+            }
+            val page0 =
+                client.get("/admin/audit?limit=30&offset=0") {
+                    header(HttpHeaders.Authorization, "Bearer good")
+                }
+            assertEquals(HttpStatusCode.OK, page0.status)
+            runBlocking { delay(400) }
+            assertTrue(box.events.any { it.action == "audit.list" }, "offset=0 should record audit.list")
+
+            box.events.clear()
+            val page1 =
+                client.get("/admin/audit?limit=30&offset=30") {
+                    header(HttpHeaders.Authorization, "Bearer good")
+                }
+            assertEquals(HttpStatusCode.OK, page1.status)
+            runBlocking { delay(400) }
+            assertEquals(emptyList(), box.events.filter { it.action == "audit.list" })
         }
 }
