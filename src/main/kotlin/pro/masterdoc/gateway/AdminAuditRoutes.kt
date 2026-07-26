@@ -8,6 +8,9 @@ import io.ktor.server.response.respondBytes
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
+import org.slf4j.LoggerFactory
+
+private val adminAuditLog = LoggerFactory.getLogger("pro.masterdoc.gateway.AdminAuditRoutes")
 
 fun Application.installAdminAuditRoutes(deps: GatewayDeps) {
     routing {
@@ -33,7 +36,11 @@ fun Application.installAdminAuditRoutes(deps: GatewayDeps) {
                         ),
                     )
                 }
-            } catch (_: UpstreamUnavailableException) {
+            } catch (e: UpstreamUnavailableException) {
+                val requestId = call.attributes.getOrNull(RequestIdKey) ?: "-"
+                adminAuditLog.error(
+                    "event=upstream_unavailable service=black-box-service cause=${e.message} requestId=$requestId",
+                )
                 call.respondText("Bad Gateway", status = HttpStatusCode.BadGateway)
             }
         }

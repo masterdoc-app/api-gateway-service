@@ -11,6 +11,9 @@ import io.ktor.server.response.respondBytes
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
+import org.slf4j.LoggerFactory
+
+private val meRoutesLog = LoggerFactory.getLogger("pro.masterdoc.gateway.MeRoutes")
 
 fun Application.installMeRoutes(deps: GatewayDeps) {
     routing {
@@ -30,7 +33,11 @@ fun Application.installMeRoutes(deps: GatewayDeps) {
                 val contentType =
                     upstream.contentType?.let { ContentType.parse(it) } ?: ContentType.Application.Json
                 call.respondBytes(upstream.body, contentType, upstream.status)
-            } catch (_: UpstreamUnavailableException) {
+            } catch (e: UpstreamUnavailableException) {
+                val requestId = call.attributes.getOrNull(RequestIdKey) ?: "-"
+                meRoutesLog.error(
+                    "event=upstream_unavailable service=feature-service cause=${e.message} requestId=$requestId",
+                )
                 call.response.header("X-Request-Id", call.request.header("X-Request-Id") ?: "")
                 call.respondText("Bad Gateway", status = HttpStatusCode.BadGateway)
             }

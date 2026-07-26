@@ -14,6 +14,9 @@ import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import io.ktor.utils.io.readRemaining
 import kotlinx.io.readByteArray
+import org.slf4j.LoggerFactory
+
+private val v1ProxyLog = LoggerFactory.getLogger("pro.masterdoc.gateway.V1ProxyRoutes")
 
 private val hopByHop =
     setOf(
@@ -64,7 +67,11 @@ fun Application.installV1ProxyRoutes(deps: GatewayDeps) {
                             upstream.contentType?.let { ContentType.parse(it) }
                                 ?: ContentType.Application.Json
                         call.respondBytes(upstream.body, contentType, upstream.status)
-                    } catch (_: UpstreamUnavailableException) {
+                    } catch (e: UpstreamUnavailableException) {
+                        val requestId = call.attributes.getOrNull(RequestIdKey) ?: "-"
+                        v1ProxyLog.error(
+                            "event=proxy_error service=backend cause=${e.message} requestId=$requestId",
+                        )
                         call.respondText("Bad Gateway", status = HttpStatusCode.BadGateway)
                     }
                 }

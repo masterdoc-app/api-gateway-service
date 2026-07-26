@@ -14,6 +14,7 @@ import io.ktor.server.request.path
 import io.ktor.server.response.header
 import io.ktor.util.AttributeKey
 import java.util.UUID
+import org.slf4j.MDC
 import org.slf4j.event.Level
 
 val RequestIdKey = AttributeKey<String>("RequestId")
@@ -21,6 +22,7 @@ val RequestIdKey = AttributeKey<String>("RequestId")
 fun Application.installObservability(config: GatewayConfig) {
     install(CallLogging) {
         level = Level.INFO
+        mdc(RequestIdKey.name) { call -> call.attributes.getOrNull(RequestIdKey) }
         format { call ->
             val requestId = call.attributes.getOrNull(RequestIdKey) ?: "-"
             val status = call.response.status()?.value ?: 0
@@ -54,5 +56,11 @@ fun Application.installObservability(config: GatewayConfig) {
         val requestId = incoming ?: UUID.randomUUID().toString()
         call.attributes.put(RequestIdKey, requestId)
         call.response.header("X-Request-Id", requestId)
+        MDC.put("requestId", requestId)
+        try {
+            proceed()
+        } finally {
+            MDC.remove("requestId")
+        }
     }
 }

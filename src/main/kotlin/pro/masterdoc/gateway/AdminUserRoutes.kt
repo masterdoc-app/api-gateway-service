@@ -11,6 +11,9 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.server.routing.routing
+import org.slf4j.LoggerFactory
+
+private val adminUserLog = LoggerFactory.getLogger("pro.masterdoc.gateway.AdminUserRoutes")
 
 fun Application.installAdminUserRoutes(deps: GatewayDeps) {
     routing {
@@ -40,7 +43,11 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
                 }
             } catch (e: ZitadelAdminException) {
                 call.respondZitadelAdminException(e)
-            } catch (_: UpstreamUnavailableException) {
+            } catch (e: UpstreamUnavailableException) {
+                val requestId = call.attributes.getOrNull(RequestIdKey) ?: "-"
+                adminUserLog.error(
+                    "event=upstream_unavailable service=zitadel cause=${e.message} requestId=$requestId",
+                )
                 call.respondText("Bad Gateway", status = HttpStatusCode.BadGateway)
             }
         }
@@ -67,7 +74,11 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
                 }
             } catch (e: ZitadelAdminException) {
                 call.respondZitadelAdminException(e)
-            } catch (_: UpstreamUnavailableException) {
+            } catch (e: UpstreamUnavailableException) {
+                val requestId = call.attributes.getOrNull(RequestIdKey) ?: "-"
+                adminUserLog.error(
+                    "event=upstream_unavailable service=zitadel cause=${e.message} requestId=$requestId",
+                )
                 call.respondText("Bad Gateway", status = HttpStatusCode.BadGateway)
             }
         }
@@ -101,7 +112,11 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
                 }
             } catch (e: ZitadelAdminException) {
                 call.respondZitadelAdminException(e)
-            } catch (_: UpstreamUnavailableException) {
+            } catch (e: UpstreamUnavailableException) {
+                val requestId = call.attributes.getOrNull(RequestIdKey) ?: "-"
+                adminUserLog.error(
+                    "event=upstream_unavailable service=zitadel cause=${e.message} requestId=$requestId",
+                )
                 call.respondText("Bad Gateway", status = HttpStatusCode.BadGateway)
             }
         }
@@ -130,7 +145,11 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
                 }
             } catch (e: ZitadelAdminException) {
                 call.respondZitadelAdminException(e)
-            } catch (_: UpstreamUnavailableException) {
+            } catch (e: UpstreamUnavailableException) {
+                val requestId = call.attributes.getOrNull(RequestIdKey) ?: "-"
+                adminUserLog.error(
+                    "event=upstream_unavailable service=zitadel cause=${e.message} requestId=$requestId",
+                )
                 call.respondText("Bad Gateway", status = HttpStatusCode.BadGateway)
             }
         }
@@ -163,7 +182,11 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
                 )
             } catch (e: ZitadelAdminException) {
                 call.respondZitadelAdminException(e)
-            } catch (_: UpstreamUnavailableException) {
+            } catch (e: UpstreamUnavailableException) {
+                val requestId = call.attributes.getOrNull(RequestIdKey) ?: "-"
+                adminUserLog.error(
+                    "event=upstream_unavailable service=zitadel cause=${e.message} requestId=$requestId",
+                )
                 call.respondText("Bad Gateway", status = HttpStatusCode.BadGateway)
             }
         }
@@ -171,6 +194,12 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
 }
 
 private suspend fun io.ktor.server.application.ApplicationCall.respondZitadelAdminException(e: ZitadelAdminException) {
+    if (e is ZitadelAdminException.Upstream) {
+        val requestId = attributes.getOrNull(RequestIdKey) ?: "-"
+        adminUserLog.error(
+            "event=upstream_error service=zitadel cause=${e.message} requestId=$requestId",
+        )
+    }
     val status =
         when (e) {
             is ZitadelAdminException.Conflict -> HttpStatusCode.Conflict

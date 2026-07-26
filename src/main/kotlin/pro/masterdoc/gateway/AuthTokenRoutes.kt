@@ -11,6 +11,9 @@ import io.ktor.server.response.respondBytes
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
+import org.slf4j.LoggerFactory
+
+private val authTokenLog = LoggerFactory.getLogger("pro.masterdoc.gateway.AuthTokenRoutes")
 
 fun Application.installAuthTokenRoutes(deps: GatewayDeps) {
     routing {
@@ -22,7 +25,11 @@ fun Application.installAuthTokenRoutes(deps: GatewayDeps) {
                     upstream.contentType?.let { ContentType.parse(it) }
                         ?: ContentType.Application.Json
                 call.respondBytes(upstream.body, contentType, upstream.status)
-            } catch (_: UpstreamUnavailableException) {
+            } catch (e: UpstreamUnavailableException) {
+                val requestId = call.attributes.getOrNull(RequestIdKey) ?: "-"
+                authTokenLog.error(
+                    "event=upstream_unavailable service=zitadel cause=${e.message} requestId=$requestId",
+                )
                 call.response.header("X-Request-Id", call.request.header("X-Request-Id") ?: "")
                 call.respondText("Bad Gateway", status = HttpStatusCode.BadGateway)
             }

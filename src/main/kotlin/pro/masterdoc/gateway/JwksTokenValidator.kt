@@ -8,11 +8,14 @@ import com.auth0.jwt.interfaces.DecodedJWT
 import java.net.URI
 import java.security.interfaces.RSAPublicKey
 import java.util.concurrent.TimeUnit
+import org.slf4j.LoggerFactory
 
 class JwksTokenValidator(
     private val issuer: String,
     jwkSetUri: String,
 ) : TokenValidator {
+    private val log = LoggerFactory.getLogger(JwksTokenValidator::class.java)
+
     private val jwkProvider =
         JwkProviderBuilder(URI(jwkSetUri).toURL())
             .cached(10, 24, TimeUnit.HOURS)
@@ -41,8 +44,10 @@ class JwksTokenValidator(
                 )
             ValidatedToken(subject = subject, orgId = org)
         } catch (_: JWTVerificationException) {
+            log.warn("event=jwt_invalid reason=verification_failed")
             null
         } catch (_: Exception) {
+            log.warn("event=jwt_invalid reason=unexpected")
             null
         }
     }

@@ -2,6 +2,7 @@ package pro.masterdoc.gateway
 
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
+import io.ktor.server.application.ApplicationStopped
 import io.ktor.server.application.install
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
@@ -11,9 +12,20 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import org.slf4j.LoggerFactory
+
+private val applicationLog = LoggerFactory.getLogger("pro.masterdoc.gateway.Application")
 
 fun main() {
     val config = GatewayConfig.fromEnv()
+    applicationLog.info(
+        "event=startup port=${config.port} " +
+            "zitadelIssuerConfigured=${config.zitadelIssuer.isNotBlank()} " +
+            "zitadelJwkSetUriConfigured=${config.zitadelJwkSetUri.isNotBlank()} " +
+            "zitadelProjectIdConfigured=${config.zitadelProjectId.isNotBlank()} " +
+            "zitadelMgmtTokenConfigured=${config.zitadelMgmtToken.isNotBlank()} " +
+            "blackBoxInternalTokenConfigured=${config.blackBoxInternalToken.isNotBlank()}",
+    )
     embeddedServer(Netty, port = config.port, host = "0.0.0.0") {
         module(config)
     }.start(wait = true)
@@ -23,6 +35,9 @@ fun Application.module(
     config: GatewayConfig,
     deps: GatewayDeps = GatewayDeps.live(config),
 ) {
+    environment.monitor.subscribe(ApplicationStopped) {
+        applicationLog.info("event=shutdown")
+    }
     installObservability(config)
     install(ContentNegotiation) {
         json(

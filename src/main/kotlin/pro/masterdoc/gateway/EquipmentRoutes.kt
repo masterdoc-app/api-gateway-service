@@ -23,6 +23,9 @@ import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import io.ktor.utils.io.readRemaining
 import kotlinx.io.readByteArray
+import org.slf4j.LoggerFactory
+
+private val equipmentLog = LoggerFactory.getLogger("pro.masterdoc.gateway.EquipmentRoutes")
 
 fun Application.installEquipmentRoutes(config: GatewayConfig, deps: GatewayDeps) {
     val client = HttpClient(CIO)
@@ -106,7 +109,11 @@ private suspend fun forward(
                 ),
             )
         }
-    } catch (_: Exception) {
+    } catch (e: Exception) {
+        val requestId = call.attributes.getOrNull(RequestIdKey) ?: "-"
+        equipmentLog.error(
+            "event=proxy_error service=equipment cause=${e.message} requestId=$requestId",
+        )
         call.respondText("Bad Gateway", status = HttpStatusCode.BadGateway)
     }
 }

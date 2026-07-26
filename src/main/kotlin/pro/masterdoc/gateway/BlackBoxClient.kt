@@ -77,6 +77,7 @@ class HttpBlackBoxClient(
                 setBody(json.encodeToString(CreateAuditEventRequest.serializer(), event))
             }
         } catch (e: Exception) {
+            auditLog.error("event=upstream_unavailable service=black-box-service cause=${e.message}")
             throw UpstreamUnavailableException("black-box-service unavailable", e)
         }
     }
@@ -106,6 +107,7 @@ class HttpBlackBoxClient(
                 body = response.bodyAsBytes(),
             )
         } catch (e: Exception) {
+            auditLog.error("event=upstream_unavailable service=black-box-service cause=${e.message}")
             throw UpstreamUnavailableException("black-box-service unavailable", e)
         }
     }
@@ -120,7 +122,7 @@ fun BlackBoxClient.recordAsync(event: CreateAuditEventRequest) {
         try {
             client.postEvent(event)
         } catch (e: Exception) {
-            auditLog.warn("black-box audit failed: {}", e.message)
+            auditLog.warn("event=upstream_error service=black-box-service cause=${e.message}")
         }
     }
 }

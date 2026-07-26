@@ -10,6 +10,9 @@ import io.ktor.client.statement.bodyAsBytes
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
+import org.slf4j.LoggerFactory
+
+private val clientsLog = LoggerFactory.getLogger("pro.masterdoc.gateway.Clients")
 
 fun interface FeatureServiceClient {
     suspend fun getMe(authorizationHeader: String): UpstreamResult
@@ -57,6 +60,7 @@ class HttpFeatureServiceClient(
                 body = response.bodyAsBytes(),
             )
         } catch (e: Exception) {
+            clientsLog.error("event=upstream_unavailable service=feature-service cause=${e.message}")
             throw UpstreamUnavailableException("feature-service unavailable", e)
         }
     }
@@ -85,6 +89,7 @@ class HttpBackendProxyClient(
                 body = response.bodyAsBytes(),
             )
         } catch (e: Exception) {
+            clientsLog.error("event=upstream_unavailable service=backend cause=${e.message}")
             throw UpstreamUnavailableException("backend unavailable", e)
         }
     }
@@ -138,6 +143,7 @@ class HttpZitadelTokenClient(
                 body = response.bodyAsBytes(),
             )
         } catch (e: Exception) {
+            clientsLog.error("event=upstream_unavailable service=zitadel cause=${e.message}")
             throw UpstreamUnavailableException("zitadel token endpoint unavailable", e)
         }
     }
