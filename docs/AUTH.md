@@ -10,7 +10,7 @@
 | `GET /auth/url` | Получить ссылку на страницу логина |
 | `POST /auth/token` | Обменять `code` или `refresh_token` на токены |
 | `GET /me` | Кто я и какие фичи (уже с Bearer) |
-| `/admin/users*` | Приглашение и управление пользователями (Bearer + feature `user_invite`; см. `openapi.yaml`) |
+| `/admin/users*` | Приглашение и управление пользователями (Bearer + feature `admin`; см. `openapi.yaml`) |
 
 Страница ввода пароля — на Zitadel (браузер). Обмен кода на токены — **через gateway**.
 

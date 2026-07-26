@@ -25,7 +25,7 @@ class AdminAuditRoutesTest {
         }
 
     @Test
-    fun `GET admin audit requires user_invite`() = testApplication {
+    fun `GET admin audit requires admin`() = testApplication {
         application {
             module(
                 GatewayConfig.testDefaults(),
@@ -49,7 +49,7 @@ class AdminAuditRoutesTest {
             module(
                 GatewayConfig.testDefaults(),
                 GatewayDeps(
-                    featureClient = featureClientWith("user_invite"),
+                    featureClient = featureClientWith("admin"),
                     backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
                     blackBoxClient =
                         object : BlackBoxClient {

@@ -12,7 +12,7 @@ import io.ktor.server.routing.routing
 fun Application.installAdminAuditRoutes(deps: GatewayDeps) {
     routing {
         get("/admin/audit") {
-            val validated = call.requireUserInvite(deps) ?: return@get
+            val validated = call.requireAdmin(deps) ?: return@get
             val orgId = validated.orgId!!
             val userId = call.request.queryParameters["userId"]?.takeIf { it.isNotBlank() }
             val limit = call.request.queryParameters["limit"]?.toIntOrNull()?.coerceIn(1, 500) ?: 100

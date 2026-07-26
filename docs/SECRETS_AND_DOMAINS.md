@@ -49,7 +49,7 @@ Admin org scoping comes from JWT (ambient `TenantContext`), not from gateway env
 - PAT is **server-only** — never ship to browser, mobile, or admin SPA bundles.
 - Prefer a **dedicated machine user** service account with minimal IAM; do not reuse a human admin password.
 - If unset, admin routes return `502` with a misconfiguration message on first Zitadel call.
-- See `openapi.yaml` for `/admin/users*` contract; callers still need Bearer JWT + feature `user_invite`.
+- See `openapi.yaml` for `/admin/users*` contract; callers still need Bearer JWT + feature `admin`.
 
 ## GitHub Secrets (`masterdoc-app/api-gateway-service`)
 

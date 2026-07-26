@@ -75,17 +75,17 @@ class AdminUserRoutesTest {
     @Test
     fun `POST invites without Authorization returns 401`() = testApplication {
         application {
-            module(GatewayConfig.testDefaults(), testDeps(featureClientWith("user_invite")))
+            module(GatewayConfig.testDefaults(), testDeps(featureClientWith("admin")))
         }
         val response = client.post("/admin/users/invites") {
             header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-            setBody("""{"email":"a@b.com","givenName":"A","familyName":"B","features":["user_invite"]}""")
+            setBody("""{"email":"a@b.com","givenName":"A","familyName":"B","features":["admin"]}""")
         }
         assertEquals(HttpStatusCode.Unauthorized, response.status)
     }
 
     @Test
-    fun `POST invites with valid token but no user_invite returns 403`() = testApplication {
+    fun `POST invites with valid token but no admin returns 403`() = testApplication {
         application {
             module(GatewayConfig.testDefaults(), testDeps(featureClientWith("board")))
         }
@@ -93,15 +93,15 @@ class AdminUserRoutesTest {
             client.post("/admin/users/invites") {
                 header(HttpHeaders.Authorization, "Bearer good-token")
                 header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                setBody("""{"email":"a@b.com","givenName":"A","familyName":"B","features":["user_invite"]}""")
+                setBody("""{"email":"a@b.com","givenName":"A","familyName":"B","features":["admin"]}""")
             }
         assertEquals(HttpStatusCode.Forbidden, response.status)
     }
 
     @Test
-    fun `POST invites with user_invite returns 201 with user details`() = testApplication {
+    fun `POST invites with admin returns 201 with user details`() = testApplication {
         application {
-            module(GatewayConfig.testDefaults(), testDeps(featureClientWith("user_invite")))
+            module(GatewayConfig.testDefaults(), testDeps(featureClientWith("admin")))
         }
         val response =
             client.post("/admin/users/invites") {
@@ -122,7 +122,7 @@ class AdminUserRoutesTest {
     @Test
     fun `POST invites with unknown feature returns 400`() = testApplication {
         application {
-            module(GatewayConfig.testDefaults(), testDeps(featureClientWith("user_invite")))
+            module(GatewayConfig.testDefaults(), testDeps(featureClientWith("admin")))
         }
         val response =
             client.post("/admin/users/invites") {
@@ -137,10 +137,10 @@ class AdminUserRoutesTest {
     fun `POST invites with duplicate email returns 409`() = testApplication {
         val fake = FakeZitadelAdminClient()
         application {
-            module(GatewayConfig.testDefaults(), testDeps(featureClientWith("user_invite"), fake))
+            module(GatewayConfig.testDefaults(), testDeps(featureClientWith("admin"), fake))
         }
         val body =
-            """{"email":"dup@company.ru","givenName":"A","familyName":"B","features":["user_invite"]}"""
+            """{"email":"dup@company.ru","givenName":"A","familyName":"B","features":["admin"]}"""
         client.post("/admin/users/invites") {
             header(HttpHeaders.Authorization, "Bearer good-token")
             header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
@@ -159,12 +159,12 @@ class AdminUserRoutesTest {
     fun `GET admin users returns 200 with items and total`() = testApplication {
         val fake = FakeZitadelAdminClient()
         application {
-            module(GatewayConfig.testDefaults(), testDeps(featureClientWith("user_invite"), fake))
+            module(GatewayConfig.testDefaults(), testDeps(featureClientWith("admin"), fake))
         }
         client.post("/admin/users/invites") {
             header(HttpHeaders.Authorization, "Bearer good-token")
             header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-            setBody("""{"email":"list@company.ru","givenName":"L","familyName":"U","features":["user_invite"]}""")
+            setBody("""{"email":"list@company.ru","givenName":"L","familyName":"U","features":["admin"]}""")
         }
         val response =
             client.get("/admin/users") {
@@ -180,13 +180,13 @@ class AdminUserRoutesTest {
     fun `PUT features with empty features returns 400`() = testApplication {
         val fake = FakeZitadelAdminClient()
         application {
-            module(GatewayConfig.testDefaults(), testDeps(featureClientWith("user_invite"), fake))
+            module(GatewayConfig.testDefaults(), testDeps(featureClientWith("admin"), fake))
         }
         val inviteResponse =
             client.post("/admin/users/invites") {
                 header(HttpHeaders.Authorization, "Bearer good-token")
                 header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                setBody("""{"email":"feat@company.ru","givenName":"R","familyName":"U","features":["user_invite"]}""")
+                setBody("""{"email":"feat@company.ru","givenName":"R","familyName":"U","features":["admin"]}""")
             }
         val userId =
             Json.parseToJsonElement(inviteResponse.bodyAsText()).jsonObject["id"]!!.jsonPrimitive.content
@@ -203,13 +203,13 @@ class AdminUserRoutesTest {
     fun `PUT features with valid body returns 200 with updated features`() = testApplication {
         val fake = FakeZitadelAdminClient()
         application {
-            module(GatewayConfig.testDefaults(), testDeps(featureClientWith("user_invite"), fake))
+            module(GatewayConfig.testDefaults(), testDeps(featureClientWith("admin"), fake))
         }
         val inviteResponse =
             client.post("/admin/users/invites") {
                 header(HttpHeaders.Authorization, "Bearer good-token")
                 header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                setBody("""{"email":"update@company.ru","givenName":"U","familyName":"P","features":["user_invite"]}""")
+                setBody("""{"email":"update@company.ru","givenName":"U","familyName":"P","features":["admin"]}""")
             }
         val userId =
             Json.parseToJsonElement(inviteResponse.bodyAsText()).jsonObject["id"]!!.jsonPrimitive.content
@@ -234,13 +234,13 @@ class AdminUserRoutesTest {
                 email = "active@company.ru",
                 givenName = "A",
                 familyName = "U",
-                features = listOf("user_invite"),
+                features = listOf("admin"),
                 state = "active",
             ),
         )
         fake.markActive("active-user")
         application {
-            module(GatewayConfig.testDefaults(), testDeps(featureClientWith("user_invite"), fake))
+            module(GatewayConfig.testDefaults(), testDeps(featureClientWith("admin"), fake))
         }
         val response =
             client.post("/admin/users/active-user/resend-invite") {
@@ -256,7 +256,7 @@ class AdminUserRoutesTest {
             module(
                 GatewayConfig.testDefaults(),
                 testDeps(
-                    featureClientWith("user_invite"),
+                    featureClientWith("admin"),
                     zitadelAdminClient = recording,
                     tokenValidator = TokenValidator.accepting(orgId = "org-from-jwt"),
                 ),
@@ -280,7 +280,7 @@ class AdminUserRoutesTest {
             module(
                 GatewayConfig.testDefaults(),
                 testDeps(
-                    featureClientWith("user_invite"),
+                    featureClientWith("admin"),
                     tokenValidator = TokenValidator.acceptingWithoutOrg(),
                 ),
             )
@@ -289,7 +289,7 @@ class AdminUserRoutesTest {
             client.post("/admin/users/invites") {
                 header(HttpHeaders.Authorization, "Bearer good-token")
                 header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                setBody("""{"email":"a@b.com","givenName":"A","familyName":"B","features":["user_invite"]}""")
+                setBody("""{"email":"a@b.com","givenName":"A","familyName":"B","features":["admin"]}""")
             }
         assertEquals(HttpStatusCode.Unauthorized, response.status)
     }
@@ -301,7 +301,7 @@ class AdminUserRoutesTest {
             module(
                 GatewayConfig.testDefaults(),
                 testDeps(
-                    featureClientWith("user_invite"),
+                    featureClientWith("admin"),
                     zitadelAdminClient = recording,
                     tokenValidator =
                         TokenValidator { token ->
@@ -331,7 +331,7 @@ class AdminUserRoutesTest {
     fun `DELETE invited user returns 204 and removes from list`() = testApplication {
         val fake = FakeZitadelAdminClient()
         application {
-            module(GatewayConfig.testDefaults(), testDeps(featureClientWith("user_invite"), fake))
+            module(GatewayConfig.testDefaults(), testDeps(featureClientWith("admin"), fake))
         }
         val inviteResponse =
             client.post("/admin/users/invites") {
@@ -363,7 +363,7 @@ class AdminUserRoutesTest {
     fun `DELETE active user returns 204 and removes from list`() = testApplication {
         val fake = FakeZitadelAdminClient()
         application {
-            module(GatewayConfig.testDefaults(), testDeps(featureClientWith("user_invite"), fake))
+            module(GatewayConfig.testDefaults(), testDeps(featureClientWith("admin"), fake))
         }
         val inviteResponse =
             client.post("/admin/users/invites") {
@@ -399,7 +399,7 @@ class AdminUserRoutesTest {
             module(
                 GatewayConfig.testDefaults(),
                 testDeps(
-                    featureClientWith("user_invite"),
+                    featureClientWith("admin"),
                     fake,
                     tokenValidator = TokenValidator.accepting(subject = "self-user", orgId = "test-org"),
                 ),
@@ -411,7 +411,7 @@ class AdminUserRoutesTest {
                 email = "self@company.ru",
                 givenName = "Self",
                 familyName = "User",
-                features = listOf("user_invite"),
+                features = listOf("admin"),
                 state = "active",
             ),
         )
@@ -431,13 +431,13 @@ class AdminUserRoutesTest {
                 email = "invited@company.ru",
                 givenName = "I",
                 familyName = "U",
-                features = listOf("user_invite"),
+                features = listOf("admin"),
                 state = "invited",
                 inviteSent = true,
             ),
         )
         application {
-            module(GatewayConfig.testDefaults(), testDeps(featureClientWith("user_invite"), fake))
+            module(GatewayConfig.testDefaults(), testDeps(featureClientWith("admin"), fake))
         }
         val response =
             client.post("/admin/users/invited-user/resend-invite") {

@@ -62,15 +62,15 @@ class CatalogProxyRoutesTest {
     }
 
     @Test
-    fun `POST sites allowed with user_invite and audits`() = testApplication {
+    fun `POST sites allowed with admin and audits`() = testApplication {
         val box = RecordingBlackBox()
         // Equipment routes call real HTTP to catalog base URL — without a live catalog this returns 502.
-        // Assert feature gate allows user_invite for /sites (not Forbidden).
+        // Assert feature gate allows admin for /sites (not Forbidden).
         application {
             module(
                 GatewayConfig.testDefaults().copy(catalogServiceBaseUrl = "http://127.0.0.1:1"),
                 GatewayDeps(
-                    featureClient = featureClientWith("user_invite"),
+                    featureClient = featureClientWith("admin"),
                     backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
                     blackBoxClient = box,
                     tokenValidator = TokenValidator.accepting(),
@@ -89,7 +89,7 @@ class CatalogProxyRoutesTest {
     }
 
     @Test
-    fun `POST sites forbidden without equipment or user_invite`() = testApplication {
+    fun `POST sites forbidden without equipment or admin`() = testApplication {
         application {
             module(
                 GatewayConfig.testDefaults(),

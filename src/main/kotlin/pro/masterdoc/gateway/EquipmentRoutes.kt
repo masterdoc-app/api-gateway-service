@@ -27,7 +27,7 @@ import kotlinx.io.readByteArray
 fun Application.installEquipmentRoutes(config: GatewayConfig, deps: GatewayDeps) {
     val client = HttpClient(CIO)
     routing {
-        proxyPrefix("/sites", config.catalogServiceBaseUrl, client, deps, features = listOf("equipment", "user_invite"))
+        proxyPrefix("/sites", config.catalogServiceBaseUrl, client, deps, features = listOf("equipment", "admin"))
         proxyPrefix("/assets", config.catalogServiceBaseUrl, client, deps, features = listOf("equipment"))
         proxyPrefix("/maintenance-maps", config.dashboardServiceBaseUrl, client, deps, features = listOf("equipment", "charts"))
         proxyPrefix("/work-orders", config.dashboardServiceBaseUrl, client, deps, features = listOf("board"))

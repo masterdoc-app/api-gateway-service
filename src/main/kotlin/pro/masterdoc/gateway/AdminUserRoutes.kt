@@ -15,7 +15,7 @@ import io.ktor.server.routing.routing
 fun Application.installAdminUserRoutes(deps: GatewayDeps) {
     routing {
         post("/admin/users/invites") {
-            val validated = call.requireUserInvite(deps) ?: return@post
+            val validated = call.requireAdmin(deps) ?: return@post
             val orgId = validated.orgId!!
             val request = call.receive<InviteUserRequest>()
             ProductFeatures.validate(request.features)?.let { error ->
@@ -46,7 +46,7 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
         }
 
         get("/admin/users") {
-            val validated = call.requireUserInvite(deps) ?: return@get
+            val validated = call.requireAdmin(deps) ?: return@get
             val orgId = validated.orgId!!
             val limit = call.request.queryParameters["limit"]?.toIntOrNull()?.coerceIn(1, 100) ?: 50
             val offset = call.request.queryParameters["offset"]?.toIntOrNull()?.coerceAtLeast(0) ?: 0
@@ -73,7 +73,7 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
         }
 
         put("/admin/users/{id}/features") {
-            val validated = call.requireUserInvite(deps) ?: return@put
+            val validated = call.requireAdmin(deps) ?: return@put
             val orgId = validated.orgId!!
             val userId = call.parameters["id"] ?: run {
                 call.respondText("Bad Request", status = HttpStatusCode.BadRequest)
@@ -107,7 +107,7 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
         }
 
         post("/admin/users/{id}/resend-invite") {
-            val validated = call.requireUserInvite(deps) ?: return@post
+            val validated = call.requireAdmin(deps) ?: return@post
             val orgId = validated.orgId!!
             val userId = call.parameters["id"] ?: run {
                 call.respondText("Bad Request", status = HttpStatusCode.BadRequest)
@@ -136,7 +136,7 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
         }
 
         delete("/admin/users/{id}") {
-            val validated = call.requireUserInvite(deps) ?: return@delete
+            val validated = call.requireAdmin(deps) ?: return@delete
             val orgId = validated.orgId!!
             val userId = call.parameters["id"] ?: run {
                 call.respondText("Bad Request", status = HttpStatusCode.BadRequest)

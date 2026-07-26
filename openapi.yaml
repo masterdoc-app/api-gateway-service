@@ -9,7 +9,7 @@ info:
     - `GET /auth/url` — куда открыть браузер для логина (страница Zitadel)
     - `POST /auth/token` — обмен code / refresh на токены (BFF → Zitadel)
     - `GET /me` — userInfo + features (нужен Bearer JWT)
-    - `/admin/users*` — invite / list / features / resend / delete (Bearer + feature `user_invite`)
+    - `/admin/users*` — invite / list / features / resend / delete (Bearer + feature `admin`)
     - `/v1/*` — proxy в backend
 
 servers:
@@ -132,7 +132,7 @@ paths:
       summary: Invite a user and assign product features
       description: |
         Creates a human user in Zitadel (invitation email) and assigns project feature grants.
-        Caller must have feature `user_invite`.
+        Caller must have feature `admin`.
         Scoped to the caller's org from JWT (`urn:zitadel:iam:org:id` or `urn:zitadel:iam:user:resourceowner:id`).
       security:
         - bearerAuth: []
@@ -159,7 +159,7 @@ paths:
         "401":
           description: Missing or invalid JWT / missing org claim
         "403":
-          description: Authenticated but missing `user_invite` feature
+          description: Authenticated but missing `admin` feature
         "409":
           description: Email already registered (plain text)
         "502":
@@ -197,7 +197,7 @@ paths:
         "401":
           description: Missing or invalid JWT / missing org claim
         "403":
-          description: Missing `user_invite` feature
+          description: Missing `admin` feature
         "502":
           description: Zitadel Management API unavailable
 
@@ -234,7 +234,7 @@ paths:
         "401":
           description: Missing or invalid JWT
         "403":
-          description: Missing `user_invite` feature
+          description: Missing `admin` feature
         "404":
           description: Unknown user id (plain text)
         "502":
@@ -259,7 +259,7 @@ paths:
         "401":
           description: Missing or invalid JWT
         "403":
-          description: Missing `user_invite` feature
+          description: Missing `admin` feature
         "404":
           description: Unknown user id (plain text)
         "409":
@@ -289,7 +289,7 @@ paths:
         "401":
           description: Missing or invalid JWT / missing org claim
         "403":
-          description: Missing `user_invite` feature
+          description: Missing `admin` feature
         "404":
           description: Unknown user id (plain text)
         "409":
@@ -417,7 +417,7 @@ components:
           minItems: 1
           items:
             type: string
-            enum: [board, copilot, charts, equipment, user_invite]
+            enum: [board, copilot, charts, equipment, admin]
 
     SetFeaturesRequest:
       type: object
@@ -428,7 +428,7 @@ components:
           minItems: 1
           items:
             type: string
-            enum: [board, copilot, charts, equipment, user_invite]
+            enum: [board, copilot, charts, equipment, admin]
 
     AdminUser:
       type: object
@@ -448,7 +448,7 @@ components:
           type: array
           items:
             type: string
-            enum: [board, copilot, charts, equipment, user_invite]
+            enum: [board, copilot, charts, equipment, admin]
         state:
           type: string
           enum: [invited, active, inactive]

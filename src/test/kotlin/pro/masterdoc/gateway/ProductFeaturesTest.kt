@@ -16,6 +16,6 @@ class ProductFeaturesTest {
 
     @Test
     fun `accepts known features`() {
-        assertEquals(null, ProductFeatures.validate(listOf("user_invite", "charts")))
+        assertEquals(null, ProductFeatures.validate(listOf("admin", "charts")))
     }
 }

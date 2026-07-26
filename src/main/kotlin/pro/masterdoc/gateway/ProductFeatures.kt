@@ -20,11 +20,11 @@ data class FeaturesCatalogResponse(
 object ProductFeatures {
     val ENTRIES: List<FeatureDefinitionDto> =
         listOf(
+            FeatureDefinitionDto("admin", "Админ"),
             FeatureDefinitionDto("board", "Доска"),
             FeatureDefinitionDto("charts", "ППР"),
             FeatureDefinitionDto("copilot", "Наставник"),
             FeatureDefinitionDto("equipment", "Оборудование"),
-            FeatureDefinitionDto("user_invite", "Админ"),
         )
 
     val ALL: Set<String> = ENTRIES.map { it.id }.toSet()

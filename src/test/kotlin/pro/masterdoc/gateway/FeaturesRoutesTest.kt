@@ -50,8 +50,8 @@ class FeaturesRoutesTest {
         val body = json.parseToJsonElement(response.bodyAsText()).jsonObject
         val items = body["items"]!!.jsonArray
         assertEquals(5, items.size)
-        assertEquals("board", items[0].jsonObject["id"]!!.jsonPrimitive.content)
-        assertEquals("Доска", items[0].jsonObject["titleRu"]!!.jsonPrimitive.content)
-        assertTrue(items.any { it.jsonObject["id"]!!.jsonPrimitive.content == "user_invite" })
+        assertEquals("admin", items[0].jsonObject["id"]!!.jsonPrimitive.content)
+        assertEquals("Админ", items[0].jsonObject["titleRu"]!!.jsonPrimitive.content)
+        assertTrue(items.any { it.jsonObject["id"]!!.jsonPrimitive.content == "board" })
     }
 }

@@ -35,7 +35,7 @@ suspend fun ApplicationCall.requireAuthenticated(deps: GatewayDeps): ValidatedTo
     return validated
 }
 
-suspend fun ApplicationCall.requireUserInvite(deps: GatewayDeps): ValidatedToken? {
+suspend fun ApplicationCall.requireAdmin(deps: GatewayDeps): ValidatedToken? {
     val validated = requireAuthenticated(deps) ?: return null
     val authorization = request.header(HttpHeaders.Authorization)!!
     val upstream =
@@ -58,7 +58,7 @@ suspend fun ApplicationCall.requireUserInvite(deps: GatewayDeps): ValidatedToken
                 ?.map { it.jsonPrimitive.content }
                 ?: emptyList()
         }.getOrDefault(emptyList())
-    if ("user_invite" !in features) {
+    if ("admin" !in features) {
         respondText("Forbidden", status = HttpStatusCode.Forbidden)
         return null
     }
