@@ -99,6 +99,25 @@ class AdminUserRoutesTest {
     }
 
     @Test
+    fun `GET users allows black_box but invite still requires admin`() = testApplication {
+        application {
+            module(GatewayConfig.testDefaults(), testDeps(featureClientWith("black_box")))
+        }
+        val list =
+            client.get("/admin/users") {
+                header(HttpHeaders.Authorization, "Bearer good-token")
+            }
+        assertEquals(HttpStatusCode.OK, list.status)
+        val invite =
+            client.post("/admin/users/invites") {
+                header(HttpHeaders.Authorization, "Bearer good-token")
+                header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                setBody("""{"email":"a@b.com","givenName":"A","familyName":"B","features":["board"]}""")
+            }
+        assertEquals(HttpStatusCode.Forbidden, invite.status)
+    }
+
+    @Test
     fun `POST invites with admin returns 201 with user details`() = testApplication {
         application {
             module(GatewayConfig.testDefaults(), testDeps(featureClientWith("admin")))

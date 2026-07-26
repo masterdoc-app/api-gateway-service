@@ -25,59 +25,71 @@ class AdminAuditRoutesTest {
         }
 
     @Test
-    fun `GET admin audit requires admin`() = testApplication {
-        application {
-            module(
-                GatewayConfig.testDefaults(),
-                GatewayDeps(
-                    featureClient = featureClientWith("board"),
-                    backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
-                    tokenValidator = TokenValidator.accepting(),
-                ),
-            )
-        }
-        val response =
-            client.get("/admin/audit") {
-                header(HttpHeaders.Authorization, "Bearer good")
+    fun `GET admin audit requires black_box not admin`() =
+        testApplication {
+            application {
+                module(
+                    GatewayConfig.testDefaults(),
+                    GatewayDeps(
+                        featureClient = featureClientWith("admin"),
+                        backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
+                        tokenValidator = TokenValidator.accepting(),
+                    ),
+                )
             }
-        assertEquals(HttpStatusCode.Forbidden, response.status)
-    }
+            val response =
+                client.get("/admin/audit") {
+                    header(HttpHeaders.Authorization, "Bearer good")
+                }
+            assertEquals(HttpStatusCode.Forbidden, response.status)
+        }
 
     @Test
-    fun `GET admin audit proxies black-box`() = testApplication {
-        application {
-            module(
-                GatewayConfig.testDefaults(),
-                GatewayDeps(
-                    featureClient = featureClientWith("admin"),
-                    backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
-                    blackBoxClient =
-                        object : BlackBoxClient {
-                            override suspend fun postEvent(event: CreateAuditEventRequest) = Unit
+    fun `GET admin audit allows black_box and forwards offset`() =
+        testApplication {
+            var seenLimit = -1
+            var seenOffset = -1
+            var seenUserId: String? = "unset"
+            application {
+                module(
+                    GatewayConfig.testDefaults(),
+                    GatewayDeps(
+                        featureClient = featureClientWith("black_box"),
+                        backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
+                        blackBoxClient =
+                            object : BlackBoxClient {
+                                override suspend fun postEvent(event: CreateAuditEventRequest) = Unit
 
-                            override suspend fun listEvents(
-                                orgId: String,
-                                userId: String?,
-                                limit: Int,
-                            ): UpstreamResult {
-                                assertEquals("test-org", orgId)
-                                return UpstreamResult(
-                                    HttpStatusCode.OK,
-                                    "application/json",
-                                    """{"items":[{"id":"1","orgId":"test-org","userId":"u","at":"t","method":"POST","path":"/sites","status":201}]}"""
-                                        .toByteArray(),
-                                )
-                            }
-                        },
-                    tokenValidator = TokenValidator.accepting(),
-                ),
-            )
-        }
-        val response =
-            client.get("/admin/audit") {
-                header(HttpHeaders.Authorization, "Bearer good")
+                                override suspend fun listEvents(
+                                    orgId: String,
+                                    userId: String?,
+                                    limit: Int,
+                                    offset: Int,
+                                ): UpstreamResult {
+                                    assertEquals("test-org", orgId)
+                                    seenLimit = limit
+                                    seenOffset = offset
+                                    seenUserId = userId
+                                    return UpstreamResult(
+                                        HttpStatusCode.OK,
+                                        "application/json",
+                                        """{"items":[{"id":"1","orgId":"test-org","userId":"u9","at":"t","method":"POST","path":"/sites","status":201}]}"""
+                                            .toByteArray(),
+                                    )
+                                }
+                            },
+                        tokenValidator = TokenValidator.accepting(),
+                    ),
+                )
             }
-        assertEquals(HttpStatusCode.OK, response.status)
-        assertEquals(true, response.bodyAsText().contains("\"/sites\""))
-    }
+            val response =
+                client.get("/admin/audit?limit=30&offset=30&userId=u9") {
+                    header(HttpHeaders.Authorization, "Bearer good")
+                }
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals(true, response.bodyAsText().contains("\"/sites\""))
+            assertEquals(30, seenLimit)
+            assertEquals(30, seenOffset)
+            assertEquals("u9", seenUserId)
+        }
 }

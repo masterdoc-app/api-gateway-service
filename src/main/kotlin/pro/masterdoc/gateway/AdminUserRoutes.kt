@@ -53,7 +53,7 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
         }
 
         get("/admin/users") {
-            val validated = call.requireAdmin(deps) ?: return@get
+            val validated = call.requireAnyOfFeatures(deps, listOf("admin", "black_box")) ?: return@get
             val orgId = validated.orgId!!
             val limit = call.request.queryParameters["limit"]?.toIntOrNull()?.coerceIn(1, 100) ?: 50
             val offset = call.request.queryParameters["offset"]?.toIntOrNull()?.coerceAtLeast(0) ?: 0

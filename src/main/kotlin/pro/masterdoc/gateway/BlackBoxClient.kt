@@ -27,6 +27,7 @@ interface BlackBoxClient {
         orgId: String,
         userId: String?,
         limit: Int,
+        offset: Int = 0,
     ): UpstreamResult
 
     companion object {
@@ -41,6 +42,7 @@ interface BlackBoxClient {
                     orgId: String,
                     userId: String?,
                     limit: Int,
+                    offset: Int,
                 ): UpstreamResult =
                     UpstreamResult(HttpStatusCode.OK, "application/json", """{"items":[]}""".toByteArray())
             }
@@ -86,12 +88,14 @@ class HttpBlackBoxClient(
         orgId: String,
         userId: String?,
         limit: Int,
+        offset: Int,
     ): UpstreamResult {
         try {
             val q =
                 buildString {
                     append("orgId=").append(orgId)
                     append("&limit=").append(limit)
+                    append("&offset=").append(offset.coerceAtLeast(0))
                     if (!userId.isNullOrBlank()) append("&userId=").append(userId)
                 }
             val response: HttpResponse =

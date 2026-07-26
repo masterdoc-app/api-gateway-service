@@ -25,6 +25,7 @@ class ClientEventsRoutesTest {
             orgId: String,
             userId: String?,
             limit: Int,
+            offset: Int,
         ): UpstreamResult = UpstreamResult(HttpStatusCode.OK, "application/json", """{"items":[]}""".toByteArray())
     }
 

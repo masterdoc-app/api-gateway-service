@@ -101,6 +101,43 @@ suspend fun ApplicationCall.requireAdmin(deps: GatewayDeps): ValidatedToken? {
     return validated
 }
 
+/** Like [requireAdmin], but succeeds when any of [allowed] is in the caller's features. */
+suspend fun ApplicationCall.requireAnyOfFeatures(
+    deps: GatewayDeps,
+    allowed: List<String>,
+): ValidatedToken? {
+    val validated = requireAuthenticated(deps) ?: return null
+    val authorization = request.header(HttpHeaders.Authorization)!!
+    val upstream =
+        try {
+            deps.featureClient.getMe(authorization)
+        } catch (e: UpstreamUnavailableException) {
+            logUpstreamUnavailable("feature-service", e)
+            respondText("Bad Gateway", status = HttpStatusCode.BadGateway)
+            return null
+        }
+    if (upstream.status != HttpStatusCode.OK) {
+        logUpstreamError("feature-service", upstream.status.value)
+        respondText("Bad Gateway", status = HttpStatusCode.BadGateway)
+        return null
+    }
+    val features =
+        runCatching {
+            adminAuthJson
+                .parseToJsonElement(String(upstream.body))
+                .jsonObject["features"]
+                ?.jsonArray
+                ?.map { it.jsonPrimitive.content }
+                ?: emptyList()
+        }.getOrDefault(emptyList())
+    if (allowed.none { it in features }) {
+        logAuthDenied("forbidden", feature = allowed.joinToString(","))
+        respondText("Forbidden", status = HttpStatusCode.Forbidden)
+        return null
+    }
+    return validated
+}
+
 suspend fun ApplicationCall.requireFeature(deps: GatewayDeps, feature: String): Boolean =
     requireAnyFeature(deps, listOf(feature))
 
