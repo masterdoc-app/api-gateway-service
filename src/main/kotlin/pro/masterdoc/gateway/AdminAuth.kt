@@ -185,9 +185,15 @@ suspend fun ApplicationCall.requireAnyFeature(deps: GatewayDeps, features: List<
     attributes.put(OrgIdKey, validated.orgId?.takeIf { it.isNotBlank() } ?: "default-org")
     attributes.put(UserIdKey, validated.subject)
     attributes.put(AuthHeaderKey, authorization)
+    attributes.put(CallerFeaturesKey, granted)
     return true
 }
+
+/** KTD2: engineer-like callers get scope filtering downstream; board/admin see org-wide lists. */
+fun scopeFilterHeaderValue(features: List<String>): String =
+    if ("board" in features || "admin" in features) "0" else "1"
 
 val OrgIdKey = io.ktor.util.AttributeKey<String>("orgId")
 val UserIdKey = io.ktor.util.AttributeKey<String>("userId")
 val AuthHeaderKey = io.ktor.util.AttributeKey<String>("authHeader")
+val CallerFeaturesKey = io.ktor.util.AttributeKey<List<String>>("callerFeatures")

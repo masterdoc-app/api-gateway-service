@@ -31,9 +31,31 @@ fun Application.installEquipmentRoutes(config: GatewayConfig, deps: GatewayDeps)
     val client = HttpClient(CIO)
     routing {
         proxyPrefix("/sites", config.catalogServiceBaseUrl, client, deps, features = listOf("equipment", "admin"))
-        proxyPrefix("/assets", config.catalogServiceBaseUrl, client, deps, features = listOf("equipment"))
+        proxyPrefix(
+            "/assets",
+            config.catalogServiceBaseUrl,
+            client,
+            deps,
+            features = listOf("equipment"),
+            scopeFilterHint = true,
+        )
         proxyPrefix("/maintenance-maps", config.maintenanceServiceBaseUrl, client, deps, features = listOf("equipment", "charts"))
-        proxyPrefix("/work-orders", config.dashboardServiceBaseUrl, client, deps, features = listOf("board"))
+        proxyPrefix(
+            "/work-orders",
+            config.dashboardServiceBaseUrl,
+            client,
+            deps,
+            readFeatures = listOf("board", "equipment", "copilot"),
+            writeFeatures = listOf("board"),
+            scopeFilterHint = true,
+        )
+        proxyPrefix(
+            "/user-scopes",
+            config.catalogServiceBaseUrl,
+            client,
+            deps,
+            features = listOf("board"),
+        )
         proxyPrefix("/documents", config.documentServiceBaseUrl, client, deps, features = listOf("equipment"))
         proxyPrefix("/ai/technologist", config.technologistServiceBaseUrl, client, deps, features = listOf("equipment"))
         proxyPrefix("/ai/document-validator", config.technologistServiceBaseUrl, client, deps, features = listOf("equipment"))
@@ -46,19 +68,31 @@ private fun io.ktor.server.routing.Routing.proxyPrefix(
     baseUrl: String,
     client: HttpClient,
     deps: GatewayDeps,
-    features: List<String>,
+    features: List<String>? = null,
+    readFeatures: List<String>? = null,
+    writeFeatures: List<String>? = null,
+    scopeFilterHint: Boolean = false,
 ) {
+    require(features != null || (readFeatures != null && writeFeatures != null)) {
+        "proxyPrefix requires features or readFeatures+writeFeatures"
+    }
+    val readGate = readFeatures ?: features!!
+    val writeGate = writeFeatures ?: features!!
+
+    fun io.ktor.server.routing.Route.registerProxyHandler() {
+        handle {
+            val requiredFeatures =
+                if (call.request.httpMethod == HttpMethod.Get) readGate else writeGate
+            if (!call.requireAnyFeature(deps, requiredFeatures)) return@handle
+            forward(client, baseUrl, call.request.uri, call, deps, scopeFilterHint)
+        }
+    }
+
     route(prefix) {
         route("{tail...}") {
-            handle {
-                if (!call.requireAnyFeature(deps, features)) return@handle
-                forward(client, baseUrl, call.request.uri, call, deps)
-            }
+            registerProxyHandler()
         }
-        handle {
-            if (!call.requireAnyFeature(deps, features)) return@handle
-            forward(client, baseUrl, call.request.uri, call, deps)
-        }
+        registerProxyHandler()
     }
 }
 
@@ -68,9 +102,11 @@ private suspend fun forward(
     uri: String,
     call: io.ktor.server.application.ApplicationCall,
     deps: GatewayDeps,
+    scopeFilterHint: Boolean = false,
 ) {
     val orgId = call.attributes.getOrNull(OrgIdKey) ?: "default-org"
     val userId = call.attributes.getOrNull(UserIdKey) ?: "unknown"
+    val callerFeatures = call.attributes.getOrNull(CallerFeaturesKey) ?: emptyList()
     val method = call.request.httpMethod
     val bodyBytes =
         if (method in setOf(HttpMethod.Post, HttpMethod.Put, HttpMethod.Patch)) {
@@ -84,6 +120,9 @@ private suspend fun forward(
                 this.method = method
                 header("X-Org-Id", orgId)
                 header("X-User-Id", userId)
+                if (scopeFilterHint) {
+                    header("X-Scope-Filter", scopeFilterHeaderValue(callerFeatures))
+                }
                 if (bodyBytes != null) {
                     val contentTypeHeader = call.request.header(HttpHeaders.ContentType)
                     val contentType =
