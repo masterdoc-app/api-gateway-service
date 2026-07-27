@@ -2,6 +2,7 @@ package pro.masterdoc.gateway
 
 import io.ktor.client.request.get
 import io.ktor.client.request.header
+import io.ktor.client.request.patch
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
@@ -44,12 +45,53 @@ class WorkOrderProxyRoutesTest {
     }
 
     @Test
-    fun `GET work-orders board forbidden without board feature`() = testApplication {
+    fun `GET work-orders board allowed with equipment feature`() = testApplication {
+        application {
+            module(
+                GatewayConfig.testDefaults().copy(dashboardServiceBaseUrl = "http://127.0.0.1:1"),
+                GatewayDeps(
+                    featureClient = featureClientWith("equipment"),
+                    backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
+                    tokenValidator = TokenValidator.accepting(),
+                ),
+            )
+        }
+        val response =
+            client.get("/work-orders/board") {
+                header(HttpHeaders.Authorization, "Bearer good")
+            }
+        assertTrue(response.status == HttpStatusCode.BadGateway || response.status == HttpStatusCode.OK)
+        assertTrue(response.status != HttpStatusCode.Forbidden)
+    }
+
+    @Test
+    fun `PATCH work-orders forbidden without board feature`() = testApplication {
         application {
             module(
                 GatewayConfig.testDefaults(),
                 GatewayDeps(
                     featureClient = featureClientWith("equipment"),
+                    backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
+                    tokenValidator = TokenValidator.accepting(),
+                ),
+            )
+        }
+        val response =
+            client.patch("/work-orders/wo-1") {
+                header(HttpHeaders.Authorization, "Bearer good")
+                contentType(ContentType.Application.Json)
+                setBody("""{"assigneeId":"user-1"}""")
+            }
+        assertEquals(HttpStatusCode.Forbidden, response.status)
+    }
+
+    @Test
+    fun `GET work-orders board forbidden without board equipment or copilot`() = testApplication {
+        application {
+            module(
+                GatewayConfig.testDefaults(),
+                GatewayDeps(
+                    featureClient = featureClientWith("charts"),
                     backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
                     tokenValidator = TokenValidator.accepting(),
                 ),
