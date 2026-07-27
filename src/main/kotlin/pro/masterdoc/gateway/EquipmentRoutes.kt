@@ -130,6 +130,7 @@ private fun equipmentAction(method: HttpMethod, uri: String): String {
         method == HttpMethod.Post && path.endsWith("/move") -> "asset.move"
         method == HttpMethod.Post && path.endsWith("/confirm") -> "asset.confirm"
         method == HttpMethod.Post && path.endsWith("/reject") -> "asset.reject"
+        method == HttpMethod.Delete && path.startsWith("/assets/") -> "asset.delete"
         else -> "${method.value.lowercase()}:${path}"
     }
 }
