@@ -10,6 +10,7 @@ data class GatewayConfig(
     val backendBaseUrl: String,
     val catalogServiceBaseUrl: String,
     val dashboardServiceBaseUrl: String,
+    val maintenanceServiceBaseUrl: String,
     val documentServiceBaseUrl: String,
     val technologistServiceBaseUrl: String,
     val blackBoxServiceBaseUrl: String,
@@ -31,6 +32,8 @@ data class GatewayConfig(
                 backendBaseUrl = System.getenv("BACKEND_BASE_URL") ?: "http://127.0.0.1:8081",
                 catalogServiceBaseUrl = System.getenv("CATALOG_SERVICE_BASE_URL") ?: "http://127.0.0.1:8091",
                 dashboardServiceBaseUrl = System.getenv("DASHBOARD_SERVICE_BASE_URL") ?: "http://127.0.0.1:8092",
+                maintenanceServiceBaseUrl =
+                    System.getenv("MAINTENANCE_SERVICE_BASE_URL") ?: "http://127.0.0.1:8098",
                 documentServiceBaseUrl = System.getenv("DOCUMENT_SERVICE_BASE_URL") ?: "http://127.0.0.1:8093",
                 technologistServiceBaseUrl =
                     System.getenv("TECHNOLOGIST_SERVICE_BASE_URL") ?: "http://127.0.0.1:8095",
@@ -55,6 +58,7 @@ data class GatewayConfig(
                 backendBaseUrl = "http://backend.test",
                 catalogServiceBaseUrl = "http://catalog.test",
                 dashboardServiceBaseUrl = "http://dashboard.test",
+                maintenanceServiceBaseUrl = "http://maintenance.test",
                 documentServiceBaseUrl = "http://document.test",
                 technologistServiceBaseUrl = "http://technologist.test",
                 blackBoxServiceBaseUrl = "http://blackbox.test",

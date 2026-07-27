@@ -63,6 +63,7 @@ jobs:
               'BACKEND_BASE_URL=http://host.docker.internal:8081' \
               'CATALOG_SERVICE_BASE_URL=http://host.docker.internal:8091' \
               'DASHBOARD_SERVICE_BASE_URL=http://host.docker.internal:8092' \
+              'MAINTENANCE_SERVICE_BASE_URL=http://host.docker.internal:8098' \
               'DOCUMENT_SERVICE_BASE_URL=http://host.docker.internal:8093' \
               'TECHNOLOGIST_SERVICE_BASE_URL=http://host.docker.internal:8095' \
               'CORS_ORIGINS=https://app.fixaverse.ru,https://copilot.fixaverse.ru,https://copilot.masterdoc.pro,http://localhost:8080' \
@@ -82,6 +83,7 @@ jobs:
           if [ -n "${ZITADEL_MGMT_TOKEN:-}" ]; then upsert_env ZITADEL_MGMT_TOKEN "$ZITADEL_MGMT_TOKEN"; fi
           # Always refresh CORS so web hosts are not stuck on a stale .env from an older bootstrap
           upsert_env CORS_ORIGINS 'https://app.fixaverse.ru,https://copilot.fixaverse.ru,https://copilot.masterdoc.pro,http://localhost:8080'
+          upsert_env MAINTENANCE_SERVICE_BASE_URL 'http://host.docker.internal:8098'
           chmod 600 /etc/masterdoc-api-gateway/.env
           REMOTE
           # shellcheck disable=SC2086

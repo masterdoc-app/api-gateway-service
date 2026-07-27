@@ -32,7 +32,7 @@ fun Application.installEquipmentRoutes(config: GatewayConfig, deps: GatewayDeps)
     routing {
         proxyPrefix("/sites", config.catalogServiceBaseUrl, client, deps, features = listOf("equipment", "admin"))
         proxyPrefix("/assets", config.catalogServiceBaseUrl, client, deps, features = listOf("equipment"))
-        proxyPrefix("/maintenance-maps", config.dashboardServiceBaseUrl, client, deps, features = listOf("equipment", "charts"))
+        proxyPrefix("/maintenance-maps", config.maintenanceServiceBaseUrl, client, deps, features = listOf("equipment", "charts"))
         proxyPrefix("/work-orders", config.dashboardServiceBaseUrl, client, deps, features = listOf("board"))
         proxyPrefix("/documents", config.documentServiceBaseUrl, client, deps, features = listOf("equipment"))
         proxyPrefix("/ai/technologist", config.technologistServiceBaseUrl, client, deps, features = listOf("equipment"))
