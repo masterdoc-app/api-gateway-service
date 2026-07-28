@@ -65,12 +65,12 @@ class WorkOrderProxyRoutesTest {
     }
 
     @Test
-    fun `PATCH work-orders forbidden without board feature`() = testApplication {
+    fun `PATCH work-orders forbidden without board or engineer feature`() = testApplication {
         application {
             module(
                 GatewayConfig.testDefaults(),
                 GatewayDeps(
-                    featureClient = featureClientWith("engineer"),
+                    featureClient = featureClientWith("charts"),
                     backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
                     tokenValidator = TokenValidator.accepting(),
                 ),
@@ -83,6 +83,28 @@ class WorkOrderProxyRoutesTest {
                 setBody("""{"assigneeId":"user-1"}""")
             }
         assertEquals(HttpStatusCode.Forbidden, response.status)
+    }
+
+    @Test
+    fun `PATCH work-orders status allowed with engineer feature`() = testApplication {
+        application {
+            module(
+                GatewayConfig.testDefaults().copy(dashboardServiceBaseUrl = "http://127.0.0.1:1"),
+                GatewayDeps(
+                    featureClient = featureClientWith("engineer"),
+                    backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
+                    tokenValidator = TokenValidator.accepting(),
+                ),
+            )
+        }
+        val response =
+            client.patch("/work-orders/wo-1") {
+                header(HttpHeaders.Authorization, "Bearer good")
+                contentType(ContentType.Application.Json)
+                setBody("""{"status":"in_progress"}""")
+            }
+        assertTrue(response.status == HttpStatusCode.BadGateway || response.status == HttpStatusCode.OK)
+        assertTrue(response.status != HttpStatusCode.Forbidden)
     }
 
     @Test
