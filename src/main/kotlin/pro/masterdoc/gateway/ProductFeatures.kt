@@ -24,6 +24,7 @@ object ProductFeatures {
             FeatureDefinitionDto("black_box", "Чёрный ящик"),
             FeatureDefinitionDto("board", "Доска"),
             FeatureDefinitionDto("charts", "ППР"),
+            FeatureDefinitionDto("engineer", "Инженер"),
             FeatureDefinitionDto("equipment", "Оборудование"),
         )
 

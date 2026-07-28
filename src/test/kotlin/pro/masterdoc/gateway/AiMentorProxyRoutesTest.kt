@@ -29,12 +29,12 @@ class AiMentorProxyRoutesTest {
         }
 
     @Test
-    fun `POST ai mentor forbidden without equipment feature`() = testApplication {
+    fun `POST ai mentor forbidden without engineer feature`() = testApplication {
         application {
             module(
                 GatewayConfig.testDefaults(),
                 GatewayDeps(
-                    featureClient = featureClientWith("board"),
+                    featureClient = featureClientWith("equipment"),
                     backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
                     tokenValidator = TokenValidator.accepting(),
                 ),
@@ -50,7 +50,7 @@ class AiMentorProxyRoutesTest {
     }
 
     @Test
-    fun `POST ai mentor proxies to technologist with equipment feature`() {
+    fun `POST ai mentor proxies to technologist with engineer feature`() {
         var capturedPath: String? = null
         var capturedOrg: String? = null
         val technologistServer = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
@@ -73,7 +73,7 @@ class AiMentorProxyRoutesTest {
                                 "http://127.0.0.1:${technologistServer.address.port}",
                         ),
                         GatewayDeps(
-                            featureClient = featureClientWith("equipment"),
+                            featureClient = featureClientWith("engineer"),
                             backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
                             tokenValidator = TokenValidator.accepting(),
                         ),

@@ -45,12 +45,12 @@ class WorkOrderProxyRoutesTest {
     }
 
     @Test
-    fun `GET work-orders board allowed with equipment feature`() = testApplication {
+    fun `GET work-orders board allowed with engineer feature`() = testApplication {
         application {
             module(
                 GatewayConfig.testDefaults().copy(dashboardServiceBaseUrl = "http://127.0.0.1:1"),
                 GatewayDeps(
-                    featureClient = featureClientWith("equipment"),
+                    featureClient = featureClientWith("engineer"),
                     backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
                     tokenValidator = TokenValidator.accepting(),
                 ),
@@ -70,7 +70,7 @@ class WorkOrderProxyRoutesTest {
             module(
                 GatewayConfig.testDefaults(),
                 GatewayDeps(
-                    featureClient = featureClientWith("equipment"),
+                    featureClient = featureClientWith("engineer"),
                     backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
                     tokenValidator = TokenValidator.accepting(),
                 ),
@@ -86,7 +86,7 @@ class WorkOrderProxyRoutesTest {
     }
 
     @Test
-    fun `GET work-orders board forbidden without board or equipment`() = testApplication {
+    fun `GET work-orders board forbidden without board or engineer`() = testApplication {
         application {
             module(
                 GatewayConfig.testDefaults(),
