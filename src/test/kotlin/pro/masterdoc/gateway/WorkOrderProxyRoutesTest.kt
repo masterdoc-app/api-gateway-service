@@ -86,7 +86,7 @@ class WorkOrderProxyRoutesTest {
     }
 
     @Test
-    fun `GET work-orders board forbidden without board equipment or copilot`() = testApplication {
+    fun `GET work-orders board forbidden without board or equipment`() = testApplication {
         application {
             module(
                 GatewayConfig.testDefaults(),
@@ -102,6 +102,45 @@ class WorkOrderProxyRoutesTest {
                 header(HttpHeaders.Authorization, "Bearer good")
             }
         assertEquals(HttpStatusCode.Forbidden, response.status)
+    }
+
+    @Test
+    fun `GET work-orders board forbidden with stale copilot-only grant`() = testApplication {
+        application {
+            module(
+                GatewayConfig.testDefaults(),
+                GatewayDeps(
+                    featureClient = featureClientWith("copilot"),
+                    backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
+                    tokenValidator = TokenValidator.accepting(),
+                ),
+            )
+        }
+        val response =
+            client.get("/work-orders/board") {
+                header(HttpHeaders.Authorization, "Bearer good")
+            }
+        assertEquals(HttpStatusCode.Forbidden, response.status)
+    }
+
+    @Test
+    fun `GET work-orders board allowed with board feature`() = testApplication {
+        application {
+            module(
+                GatewayConfig.testDefaults().copy(dashboardServiceBaseUrl = "http://127.0.0.1:1"),
+                GatewayDeps(
+                    featureClient = featureClientWith("board"),
+                    backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
+                    tokenValidator = TokenValidator.accepting(),
+                ),
+            )
+        }
+        val response =
+            client.get("/work-orders/board") {
+                header(HttpHeaders.Authorization, "Bearer good")
+            }
+        assertTrue(response.status == HttpStatusCode.BadGateway || response.status == HttpStatusCode.OK)
+        assertTrue(response.status != HttpStatusCode.Forbidden)
     }
 
     @Test
