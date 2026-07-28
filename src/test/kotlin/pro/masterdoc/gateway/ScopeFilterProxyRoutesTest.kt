@@ -107,7 +107,7 @@ class ScopeFilterProxyRoutesTest {
     }
 
     @Test
-    fun `GET work-orders forwards X-Scope-Filter 1 for equipment-only caller`() {
+    fun `GET work-orders forwards X-Scope-Filter 1 for engineer caller`() {
         var scopeFilter: String? = null
         val dashboardServer = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
         dashboardServer.createContext("/work-orders/board") { exchange ->
@@ -127,7 +127,7 @@ class ScopeFilterProxyRoutesTest {
                             dashboardServiceBaseUrl = "http://127.0.0.1:${dashboardServer.address.port}",
                         ),
                         GatewayDeps(
-                            featureClient = featureClientWith("equipment"),
+                            featureClient = featureClientWith("engineer"),
                             backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
                             tokenValidator = TokenValidator.accepting(),
                         ),
