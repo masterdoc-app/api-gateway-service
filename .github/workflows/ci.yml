@@ -59,7 +59,7 @@ jobs:
               'ZITADEL_JWK_SET_URI=https://auth.fixaverse.ru/oauth/v2/keys' \
               'ZITADEL_PROJECT_ID=' \
               'ZITADEL_MGMT_TOKEN=' \
-              'FEATURE_SERVICE_BASE_URL=http://host.docker.internal:8082' \
+              'FEATURE_SERVICE_BASE_URL=http://feature-service:8082' \
               'BACKEND_BASE_URL=http://host.docker.internal:8081' \
               'CATALOG_SERVICE_BASE_URL=http://host.docker.internal:8091' \
               'DASHBOARD_SERVICE_BASE_URL=http://host.docker.internal:8092' \
