@@ -25,9 +25,9 @@ class ProductFeaturesTest {
     }
 
     @Test
-    fun `catalog excludes copilot`() {
+    fun `catalog excludes copilot and includes engineer`() {
         assertEquals(
-            listOf("admin", "black_box", "board", "charts", "equipment"),
+            listOf("admin", "black_box", "board", "charts", "engineer", "equipment"),
             ProductFeatures.catalog().items.map { it.id },
         )
     }
