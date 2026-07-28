@@ -45,7 +45,7 @@ fun Application.installEquipmentRoutes(config: GatewayConfig, deps: GatewayDeps)
             config.dashboardServiceBaseUrl,
             client,
             deps,
-            readFeatures = listOf("board", "equipment"),
+            readFeatures = listOf("board", "engineer"),
             writeFeatures = listOf("board"),
             scopeFilterHint = true,
         )
