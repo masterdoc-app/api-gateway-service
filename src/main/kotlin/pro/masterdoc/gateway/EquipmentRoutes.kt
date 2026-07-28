@@ -46,7 +46,7 @@ fun Application.installEquipmentRoutes(config: GatewayConfig, deps: GatewayDeps)
             client,
             deps,
             readFeatures = listOf("board", "engineer"),
-            writeFeatures = listOf("board"),
+            writeFeatures = listOf("board", "engineer"),
             scopeFilterHint = true,
         )
         proxyPrefix(
@@ -121,6 +121,7 @@ private suspend fun forward(
                 this.method = method
                 header("X-Org-Id", orgId)
                 header("X-User-Id", userId)
+                header("X-Caller-Features", callerFeatures.joinToString(","))
                 if (scopeFilterHint) {
                     header("X-Scope-Filter", scopeFilterHeaderValue(callerFeatures))
                 }
