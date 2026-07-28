@@ -417,7 +417,7 @@ components:
           minItems: 1
           items:
             type: string
-            enum: [board, copilot, charts, equipment, admin]
+            enum: [board, charts, equipment, admin]
 
     SetFeaturesRequest:
       type: object
@@ -428,7 +428,7 @@ components:
           minItems: 1
           items:
             type: string
-            enum: [board, copilot, charts, equipment, admin]
+            enum: [board, charts, equipment, admin]
 
     AdminUser:
       type: object
@@ -448,7 +448,7 @@ components:
           type: array
           items:
             type: string
-            enum: [board, copilot, charts, equipment, admin]
+            enum: [board, charts, equipment, admin]
         state:
           type: string
           enum: [invited, active, inactive]

@@ -18,4 +18,17 @@ class ProductFeaturesTest {
     fun `accepts known features`() {
         assertEquals(null, ProductFeatures.validate(listOf("admin", "charts")))
     }
+
+    @Test
+    fun `rejects removed copilot feature`() {
+        assertEquals("Unknown feature: copilot", ProductFeatures.validate(listOf("equipment", "copilot")))
+    }
+
+    @Test
+    fun `catalog excludes copilot`() {
+        assertEquals(
+            listOf("admin", "black_box", "board", "charts", "equipment"),
+            ProductFeatures.catalog().items.map { it.id },
+        )
+    }
 }

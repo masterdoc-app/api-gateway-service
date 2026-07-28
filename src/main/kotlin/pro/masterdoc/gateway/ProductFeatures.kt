@@ -24,7 +24,6 @@ object ProductFeatures {
             FeatureDefinitionDto("black_box", "Чёрный ящик"),
             FeatureDefinitionDto("board", "Доска"),
             FeatureDefinitionDto("charts", "ППР"),
-            FeatureDefinitionDto("copilot", "Наставник"),
             FeatureDefinitionDto("equipment", "Оборудование"),
         )
 
