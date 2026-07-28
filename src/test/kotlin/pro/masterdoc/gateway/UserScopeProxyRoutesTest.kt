@@ -30,12 +30,12 @@ class UserScopeProxyRoutesTest {
         }
 
     @Test
-    fun `PUT user-scopes forbidden without board feature`() = testApplication {
+    fun `PUT user-scopes forbidden without admin feature`() = testApplication {
         application {
             module(
                 GatewayConfig.testDefaults(),
                 GatewayDeps(
-                    featureClient = featureClientWith("equipment"),
+                    featureClient = featureClientWith("board"),
                     backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
                     tokenValidator = TokenValidator.accepting(),
                 ),
@@ -51,7 +51,7 @@ class UserScopeProxyRoutesTest {
     }
 
     @Test
-    fun `PUT user-scopes proxied with board feature`() {
+    fun `PUT user-scopes proxied with admin feature`() {
         var capturedOrg: String? = null
         var capturedUser: String? = null
         val catalogServer = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
@@ -73,7 +73,7 @@ class UserScopeProxyRoutesTest {
                             catalogServiceBaseUrl = "http://127.0.0.1:${catalogServer.address.port}",
                         ),
                         GatewayDeps(
-                            featureClient = featureClientWith("board"),
+                            featureClient = featureClientWith("admin"),
                             backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
                             tokenValidator = TokenValidator.accepting(),
                         ),
@@ -97,7 +97,83 @@ class UserScopeProxyRoutesTest {
     }
 
     @Test
-    fun `GET user-scopes covers forbidden without board feature`() = testApplication {
+    fun `GET user-scopes covers allowed with board feature`() {
+        val catalogServer = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
+        catalogServer.createContext("/user-scopes/user-1/covers/asset-1") { exchange ->
+            val body = """{"covers":true}""".toByteArray()
+            exchange.responseHeaders.add(HttpHeaders.ContentType, "application/json")
+            exchange.sendResponseHeaders(HttpStatusCode.OK.value, body.size.toLong())
+            exchange.responseBody.use { it.write(body) }
+        }
+        catalogServer.start()
+
+        try {
+            testApplication {
+                application {
+                    module(
+                        GatewayConfig.testDefaults().copy(
+                            catalogServiceBaseUrl = "http://127.0.0.1:${catalogServer.address.port}",
+                        ),
+                        GatewayDeps(
+                            featureClient = featureClientWith("board"),
+                            backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
+                            tokenValidator = TokenValidator.accepting(),
+                        ),
+                    )
+                }
+
+                val response =
+                    client.get("/user-scopes/user-1/covers/asset-1") {
+                        header(HttpHeaders.Authorization, "Bearer good")
+                    }
+
+                assertEquals(HttpStatusCode.OK, response.status)
+            }
+        } finally {
+            catalogServer.stop(0)
+        }
+    }
+
+    @Test
+    fun `GET user-scopes covers allowed with admin feature`() {
+        val catalogServer = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
+        catalogServer.createContext("/user-scopes/user-1/covers/asset-1") { exchange ->
+            val body = """{"covers":true}""".toByteArray()
+            exchange.responseHeaders.add(HttpHeaders.ContentType, "application/json")
+            exchange.sendResponseHeaders(HttpStatusCode.OK.value, body.size.toLong())
+            exchange.responseBody.use { it.write(body) }
+        }
+        catalogServer.start()
+
+        try {
+            testApplication {
+                application {
+                    module(
+                        GatewayConfig.testDefaults().copy(
+                            catalogServiceBaseUrl = "http://127.0.0.1:${catalogServer.address.port}",
+                        ),
+                        GatewayDeps(
+                            featureClient = featureClientWith("admin"),
+                            backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
+                            tokenValidator = TokenValidator.accepting(),
+                        ),
+                    )
+                }
+
+                val response =
+                    client.get("/user-scopes/user-1/covers/asset-1") {
+                        header(HttpHeaders.Authorization, "Bearer good")
+                    }
+
+                assertEquals(HttpStatusCode.OK, response.status)
+            }
+        } finally {
+            catalogServer.stop(0)
+        }
+    }
+
+    @Test
+    fun `GET user-scopes covers forbidden without board or admin`() = testApplication {
         application {
             module(
                 GatewayConfig.testDefaults(),

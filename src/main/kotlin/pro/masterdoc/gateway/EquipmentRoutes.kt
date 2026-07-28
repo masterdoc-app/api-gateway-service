@@ -54,7 +54,8 @@ fun Application.installEquipmentRoutes(config: GatewayConfig, deps: GatewayDeps)
             config.catalogServiceBaseUrl,
             client,
             deps,
-            features = listOf("board"),
+            readFeatures = listOf("admin", "board"),
+            writeFeatures = listOf("admin"),
         )
         proxyPrefix("/documents", config.documentServiceBaseUrl, client, deps, features = listOf("equipment"))
         proxyPrefix("/ai/technologist", config.technologistServiceBaseUrl, client, deps, features = listOf("equipment"))
