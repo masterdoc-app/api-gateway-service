@@ -6,3 +6,6 @@
 - Targeted test: `./gradlew test --tests 'pro.masterdoc.gateway.UserScopeProxyRoutesTest'`
 - Result: BUILD SUCCESSFUL.
 - Branch: `feat/customer-tickets-user-scopes-admin`
+- Commit: `ea8603d`
+- PR: https://github.com/masterdoc-app/api-gateway-service/pull/10
+- CI run `30427152970`: not started; GitHub account billing/spending-limit restriction.
