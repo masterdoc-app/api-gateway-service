@@ -63,6 +63,26 @@ class CatalogProxyRoutesTest {
     }
 
     @Test
+    fun `GET assets allowed with tickets feature`() = testApplication {
+        application {
+            module(
+                GatewayConfig.testDefaults().copy(catalogServiceBaseUrl = "http://127.0.0.1:1"),
+                GatewayDeps(
+                    featureClient = featureClientWith("tickets"),
+                    backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
+                    tokenValidator = TokenValidator.accepting(),
+                ),
+            )
+        }
+        val response =
+            client.get("/assets") {
+                header(HttpHeaders.Authorization, "Bearer good")
+            }
+        assertTrue(response.status == HttpStatusCode.BadGateway || response.status == HttpStatusCode.OK)
+        assertTrue(response.status != HttpStatusCode.Forbidden)
+    }
+
+    @Test
     fun `POST sites allowed with admin and audits`() = testApplication {
         val box = RecordingBlackBox()
         // Equipment routes call real HTTP to catalog base URL — without a live catalog this returns 502.

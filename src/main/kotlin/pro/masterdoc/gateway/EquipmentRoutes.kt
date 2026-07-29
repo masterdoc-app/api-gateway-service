@@ -30,13 +30,21 @@ private val equipmentLog = LoggerFactory.getLogger("pro.masterdoc.gateway.Equipm
 fun Application.installEquipmentRoutes(config: GatewayConfig, deps: GatewayDeps) {
     val client = HttpClient(CIO)
     routing {
-        proxyPrefix("/sites", config.catalogServiceBaseUrl, client, deps, features = listOf("equipment", "admin"))
+        proxyPrefix(
+            "/sites",
+            config.catalogServiceBaseUrl,
+            client,
+            deps,
+            readFeatures = listOf("equipment", "admin", "tickets"),
+            writeFeatures = listOf("equipment", "admin"),
+        )
         proxyPrefix(
             "/assets",
             config.catalogServiceBaseUrl,
             client,
             deps,
-            features = listOf("equipment"),
+            readFeatures = listOf("equipment", "tickets"),
+            writeFeatures = listOf("equipment"),
             scopeFilterHint = true,
         )
         proxyPrefix("/maintenance-maps", config.maintenanceServiceBaseUrl, client, deps, features = listOf("equipment", "charts"))
@@ -45,8 +53,8 @@ fun Application.installEquipmentRoutes(config: GatewayConfig, deps: GatewayDeps)
             config.dashboardServiceBaseUrl,
             client,
             deps,
-            readFeatures = listOf("board", "engineer"),
-            writeFeatures = listOf("board", "engineer"),
+            readFeatures = listOf("board", "engineer", "tickets"),
+            writeFeatures = listOf("board", "engineer", "tickets"),
             scopeFilterHint = true,
         )
         proxyPrefix(
