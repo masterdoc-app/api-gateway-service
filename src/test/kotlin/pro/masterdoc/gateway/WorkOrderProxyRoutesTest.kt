@@ -189,4 +189,65 @@ class WorkOrderProxyRoutesTest {
         assertTrue(response.status != HttpStatusCode.Forbidden)
         assertTrue(response.status != HttpStatusCode.Unauthorized)
     }
+
+    @Test
+    fun `GET work-orders allowed with tickets feature`() = testApplication {
+        application {
+            module(
+                GatewayConfig.testDefaults().copy(dashboardServiceBaseUrl = "http://127.0.0.1:1"),
+                GatewayDeps(
+                    featureClient = featureClientWith("tickets"),
+                    backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
+                    tokenValidator = TokenValidator.accepting(),
+                ),
+            )
+        }
+        val response =
+            client.get("/work-orders") {
+                header(HttpHeaders.Authorization, "Bearer good")
+            }
+        assertTrue(response.status == HttpStatusCode.BadGateway || response.status == HttpStatusCode.OK)
+        assertTrue(response.status != HttpStatusCode.Forbidden)
+    }
+
+    @Test
+    fun `POST work-orders allowed with tickets feature`() = testApplication {
+        application {
+            module(
+                GatewayConfig.testDefaults().copy(dashboardServiceBaseUrl = "http://127.0.0.1:1"),
+                GatewayDeps(
+                    featureClient = featureClientWith("tickets"),
+                    backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
+                    tokenValidator = TokenValidator.accepting(),
+                ),
+            )
+        }
+        val response =
+            client.post("/work-orders") {
+                header(HttpHeaders.Authorization, "Bearer good")
+                contentType(ContentType.Application.Json)
+                setBody("""{"type":"emergency","title":"X","assetId":"a1","siteId":"s1","dueAt":"2026-07-22"}""")
+            }
+        assertTrue(response.status == HttpStatusCode.BadGateway || response.status == HttpStatusCode.Created)
+        assertTrue(response.status != HttpStatusCode.Forbidden)
+    }
+
+    @Test
+    fun `GET work-orders forbidden with charts feature`() = testApplication {
+        application {
+            module(
+                GatewayConfig.testDefaults(),
+                GatewayDeps(
+                    featureClient = featureClientWith("charts"),
+                    backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
+                    tokenValidator = TokenValidator.accepting(),
+                ),
+            )
+        }
+        val response =
+            client.get("/work-orders") {
+                header(HttpHeaders.Authorization, "Bearer good")
+            }
+        assertEquals(HttpStatusCode.Forbidden, response.status)
+    }
 }
