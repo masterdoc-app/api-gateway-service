@@ -40,7 +40,7 @@ data class GatewayConfig(
                     System.getenv("TECHNOLOGIST_SERVICE_BASE_URL") ?: "http://127.0.0.1:8095",
                 blackBoxServiceBaseUrl =
                     System.getenv("BLACK_BOX_SERVICE_BASE_URL") ?: "http://127.0.0.1:8096",
-                mapServiceBaseUrl = System.getenv("MAP_SERVICE_BASE_URL") ?: "http://127.0.0.1:8097",
+                mapServiceBaseUrl = System.getenv("MAP_SERVICE_BASE_URL") ?: "http://127.0.0.1:8100",
                 blackBoxInternalToken = System.getenv("BLACK_BOX_INTERNAL_TOKEN") ?: "",
                 corsOrigins =
                     (System.getenv("CORS_ORIGINS") ?: "http://localhost:8080")
