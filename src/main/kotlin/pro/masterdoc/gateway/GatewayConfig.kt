@@ -14,6 +14,7 @@ data class GatewayConfig(
     val documentServiceBaseUrl: String,
     val technologistServiceBaseUrl: String,
     val blackBoxServiceBaseUrl: String,
+    val mapServiceBaseUrl: String,
     val blackBoxInternalToken: String,
     val corsOrigins: List<String>,
 ) {
@@ -39,6 +40,7 @@ data class GatewayConfig(
                     System.getenv("TECHNOLOGIST_SERVICE_BASE_URL") ?: "http://127.0.0.1:8095",
                 blackBoxServiceBaseUrl =
                     System.getenv("BLACK_BOX_SERVICE_BASE_URL") ?: "http://127.0.0.1:8096",
+                mapServiceBaseUrl = System.getenv("MAP_SERVICE_BASE_URL") ?: "http://127.0.0.1:8097",
                 blackBoxInternalToken = System.getenv("BLACK_BOX_INTERNAL_TOKEN") ?: "",
                 corsOrigins =
                     (System.getenv("CORS_ORIGINS") ?: "http://localhost:8080")
@@ -62,6 +64,7 @@ data class GatewayConfig(
                 documentServiceBaseUrl = "http://document.test",
                 technologistServiceBaseUrl = "http://technologist.test",
                 blackBoxServiceBaseUrl = "http://blackbox.test",
+                mapServiceBaseUrl = "http://map.test",
                 blackBoxInternalToken = "",
                 corsOrigins = listOf("http://localhost:8080"),
             )

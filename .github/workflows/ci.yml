@@ -66,6 +66,7 @@ jobs:
               'MAINTENANCE_SERVICE_BASE_URL=http://host.docker.internal:8098' \
               'DOCUMENT_SERVICE_BASE_URL=http://host.docker.internal:8093' \
               'TECHNOLOGIST_SERVICE_BASE_URL=http://host.docker.internal:8095' \
+              'MAP_SERVICE_BASE_URL=http://host.docker.internal:8097' \
               'CORS_ORIGINS=https://app.fixaverse.ru,https://copilot.fixaverse.ru,https://copilot.masterdoc.pro,http://localhost:8080' \
               > /etc/masterdoc-api-gateway/.env
             chmod 600 /etc/masterdoc-api-gateway/.env
@@ -84,6 +85,7 @@ jobs:
           # Always refresh CORS so web hosts are not stuck on a stale .env from an older bootstrap
           upsert_env CORS_ORIGINS 'https://app.fixaverse.ru,https://copilot.fixaverse.ru,https://copilot.masterdoc.pro,http://localhost:8080'
           upsert_env MAINTENANCE_SERVICE_BASE_URL 'http://host.docker.internal:8098'
+          upsert_env MAP_SERVICE_BASE_URL 'http://host.docker.internal:8097'
           chmod 600 /etc/masterdoc-api-gateway/.env
           REMOTE
           # shellcheck disable=SC2086

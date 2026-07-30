@@ -297,6 +297,74 @@ paths:
         "502":
           description: Zitadel Management API unavailable
 
+  /engineer-locations:
+    get:
+      operationId: getEngineerLocations
+      summary: List active engineer locations for the caller's organization
+      description: Proxies to map-service. Requires the `map` feature.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Active organization locations; entries older than seven minutes are omitted.
+        "401":
+          description: Missing or invalid JWT
+        "403":
+          description: Missing `map` feature
+        "502":
+          description: map-service unavailable
+
+  /engineer-locations/me:
+    put:
+      operationId: putMyEngineerLocation
+      summary: Upsert the caller's engineer location
+      description: Proxies to map-service. Requires the `engineer` feature.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lat, lon]
+              properties:
+                lat:
+                  type: number
+                lon:
+                  type: number
+                accuracyM:
+                  type: number
+                recordedAt:
+                  type: string
+                  format: date-time
+                displayName:
+                  type: string
+      responses:
+        "200":
+          description: Location upserted
+        "401":
+          description: Missing or invalid JWT
+        "403":
+          description: Missing `engineer` feature
+        "502":
+          description: map-service unavailable
+    delete:
+      operationId: deleteMyEngineerLocation
+      summary: Remove the caller's engineer location
+      description: Proxies to map-service. Requires the `engineer` feature.
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Location removed
+        "401":
+          description: Missing or invalid JWT
+        "403":
+          description: Missing `engineer` feature
+        "502":
+          description: map-service unavailable
+
   /v1/{path}:
     parameters:
       - name: path
