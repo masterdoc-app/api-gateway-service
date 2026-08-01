@@ -27,7 +27,7 @@ internal object ZitadelAdminOrgHeader {
 }
 
 interface ZitadelAdminClient {
-    suspend fun inviteUser(request: InviteUserRequest): AdminUser
+    suspend fun inviteUser(request: ResolvedInviteUserRequest): AdminUser
 
     suspend fun listUsers(limit: Int, offset: Int): AdminUserList
 
@@ -43,7 +43,7 @@ interface ZitadelAdminClient {
                 private fun fail(): Nothing =
                     throw UpstreamUnavailableException("zitadel admin not configured")
 
-                override suspend fun inviteUser(request: InviteUserRequest): AdminUser = fail()
+                override suspend fun inviteUser(request: ResolvedInviteUserRequest): AdminUser = fail()
 
                 override suspend fun listUsers(limit: Int, offset: Int): AdminUserList = fail()
 
@@ -65,7 +65,7 @@ interface ZitadelAdminClient {
             object : ZitadelAdminClient {
                 private fun fail(): Nothing = throw ZitadelAdminException.Upstream(message)
 
-                override suspend fun inviteUser(request: InviteUserRequest): AdminUser = fail()
+                override suspend fun inviteUser(request: ResolvedInviteUserRequest): AdminUser = fail()
 
                 override suspend fun listUsers(limit: Int, offset: Int): AdminUserList = fail()
 
@@ -84,7 +84,7 @@ class HttpZitadelAdminClient(
 ) : ZitadelAdminClient {
     private val baseUrl = config.zitadelIssuer.trimEnd('/')
 
-    override suspend fun inviteUser(request: InviteUserRequest): AdminUser {
+    override suspend fun inviteUser(request: ResolvedInviteUserRequest): AdminUser {
         val createBody =
             buildJsonObject {
                 putJsonObject("profile") {
@@ -445,7 +445,7 @@ class FakeZitadelAdminClient : ZitadelAdminClient {
     private val idByEmail = mutableMapOf<String, String>()
     private var nextId = 1L
 
-    override suspend fun inviteUser(request: InviteUserRequest): AdminUser {
+    override suspend fun inviteUser(request: ResolvedInviteUserRequest): AdminUser {
         val emailKey = request.email.lowercase()
         if (emailKey in idByEmail) {
             throw ZitadelAdminException.Conflict("email already registered")

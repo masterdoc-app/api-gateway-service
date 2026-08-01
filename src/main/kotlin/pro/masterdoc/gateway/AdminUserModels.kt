@@ -7,11 +7,28 @@ data class InviteUserRequest(
     val email: String,
     val givenName: String,
     val familyName: String,
+    val roles: List<String>,
+)
+
+data class ResolvedInviteUserRequest(
+    val email: String,
+    val givenName: String,
+    val familyName: String,
     val features: List<String>,
 )
 
 @Serializable
 data class SetFeaturesRequest(val features: List<String>)
+
+@Serializable
+data class ProductRoleDto(
+    val id: String,
+    val titleRu: String,
+    val features: List<String>,
+)
+
+@Serializable
+data class ProductRolesResponse(val items: List<ProductRoleDto>)
 
 @Serializable
 data class AdminUser(

@@ -4,6 +4,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.call
 import io.ktor.server.request.receive
+import io.ktor.server.request.header
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.delete
@@ -11,6 +12,8 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.server.routing.routing
+import io.ktor.http.isSuccess
+import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
 
 private val adminUserLog = LoggerFactory.getLogger("pro.masterdoc.gateway.AdminUserRoutes")
@@ -21,13 +24,52 @@ fun Application.installAdminUserRoutes(deps: GatewayDeps) {
             val validated = call.requireAdmin(deps) ?: return@post
             val orgId = validated.orgId!!
             val request = call.receive<InviteUserRequest>()
-            ProductFeatures.validate(request.features)?.let { error ->
+            if (request.roles.isEmpty()) {
+                call.respondText("roles must not be empty", status = HttpStatusCode.BadRequest)
+                return@post
+            }
+            val authorization = call.request.header(io.ktor.http.HttpHeaders.Authorization)!!
+            val rolesResult =
+                try {
+                    deps.featureRolesClient.getRoles(authorization, orgId)
+                } catch (e: UpstreamUnavailableException) {
+                    call.respondText("Bad Gateway", status = HttpStatusCode.BadGateway)
+                    return@post
+                }
+            if (!rolesResult.status.isSuccess()) {
+                val status = if (rolesResult.status.value >= 500) HttpStatusCode.BadGateway else rolesResult.status
+                call.respondText(rolesResult.body.decodeToString(), status = status)
+                return@post
+            }
+            val roles =
+                try {
+                    Json { ignoreUnknownKeys = true }.decodeFromString<ProductRolesResponse>(rolesResult.body.decodeToString()).items
+                } catch (e: Exception) {
+                    call.respondText("Bad Gateway", status = HttpStatusCode.BadGateway)
+                    return@post
+                }
+            val selectedRoles = request.roles.toSet()
+            val unknownRole = selectedRoles.firstOrNull { roleId -> roles.none { it.id == roleId } }
+            if (unknownRole != null) {
+                call.respondText("Unknown role: $unknownRole", status = HttpStatusCode.BadRequest)
+                return@post
+            }
+            val features = roles.filter { it.id in selectedRoles }.flatMap { it.features }.distinct().sorted()
+            ProductFeatures.validate(features)?.let { error ->
                 call.respondText(error, status = HttpStatusCode.BadRequest)
                 return@post
             }
             try {
                 TenantContext.withTenant(orgId) {
-                    val user = deps.zitadelAdminClient.inviteUser(request)
+                    val user =
+                        deps.zitadelAdminClient.inviteUser(
+                            ResolvedInviteUserRequest(
+                                email = request.email,
+                                givenName = request.givenName,
+                                familyName = request.familyName,
+                                features = features,
+                            ),
+                        )
                     call.respond(HttpStatusCode.Created, user)
                     deps.blackBoxClient.recordAsync(
                         CreateAuditEventRequest(

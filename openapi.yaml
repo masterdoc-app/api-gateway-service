@@ -129,7 +129,7 @@ paths:
   /admin/users/invites:
     post:
       operationId: postAdminUserInvite
-      summary: Invite a user and assign product features
+      summary: Invite a user by product roles
       description: |
         Creates a human user in Zitadel (invitation email) and assigns project feature grants.
         Caller must have feature `admin`.
@@ -146,7 +146,7 @@ paths:
               email: ivan@company.ru
               givenName: Ivan
               familyName: Petrov
-              features: [charts, equipment]
+              roles: [manager]
       responses:
         "201":
           description: User created and invite sent (when IdP accepts email send)
@@ -155,7 +155,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/AdminUser"
         "400":
-          description: Validation error or unknown feature (plain text)
+          description: Validation error or unknown role/feature (plain text)
         "401":
           description: Missing or invalid JWT / missing org claim
         "403":
@@ -471,7 +471,7 @@ components:
 
     InviteUserRequest:
       type: object
-      required: [email, givenName, familyName, features]
+      required: [email, givenName, familyName, roles]
       properties:
         email:
           type: string
@@ -480,12 +480,12 @@ components:
           type: string
         familyName:
           type: string
-        features:
+        roles:
           type: array
           minItems: 1
           items:
             type: string
-            enum: [board, charts, equipment, admin]
+            description: Organization product role id
 
     SetFeaturesRequest:
       type: object

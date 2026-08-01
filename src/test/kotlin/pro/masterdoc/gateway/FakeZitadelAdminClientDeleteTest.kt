@@ -11,7 +11,7 @@ class FakeZitadelAdminClientDeleteTest {
         val fake = FakeZitadelAdminClient()
         val created =
             fake.inviteUser(
-                InviteUserRequest("a@b.com", "A", "B", listOf("board")),
+                ResolvedInviteUserRequest("a@b.com", "A", "B", listOf("board")),
             )
         fake.deleteUser(created.id)
         assertEquals(0, fake.listUsers(50, 0).total)
@@ -22,7 +22,7 @@ class FakeZitadelAdminClientDeleteTest {
         val fake = FakeZitadelAdminClient()
         val created =
             fake.inviteUser(
-                InviteUserRequest("a@b.com", "A", "B", listOf("board")),
+                ResolvedInviteUserRequest("a@b.com", "A", "B", listOf("board")),
             )
         fake.markActive(created.id)
         fake.deleteUser(created.id)
