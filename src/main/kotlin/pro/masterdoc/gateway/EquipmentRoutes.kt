@@ -58,6 +58,13 @@ fun Application.installEquipmentRoutes(config: GatewayConfig, deps: GatewayDeps)
             scopeFilterHint = true,
         )
         proxyPrefix(
+            "/reports",
+            config.dashboardServiceBaseUrl,
+            client,
+            deps,
+            features = listOf("reports", "admin"),
+        )
+        proxyPrefix(
             "/user-scopes",
             config.catalogServiceBaseUrl,
             client,

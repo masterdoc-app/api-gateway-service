@@ -129,4 +129,43 @@ class CatalogProxyRoutesTest {
             }
         assertEquals(HttpStatusCode.Forbidden, response.status)
     }
+
+    @Test
+    fun `GET reports allowed with reports feature`() = testApplication {
+        application {
+            module(
+                GatewayConfig.testDefaults().copy(dashboardServiceBaseUrl = "http://127.0.0.1:1"),
+                GatewayDeps(
+                    featureClient = featureClientWith("reports"),
+                    backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
+                    tokenValidator = TokenValidator.accepting(),
+                ),
+            )
+        }
+        val response =
+            client.get("/reports/equipment-downtime?from=2026-07-22&to=2026-07-23") {
+                header(HttpHeaders.Authorization, "Bearer good")
+            }
+        assertTrue(response.status == HttpStatusCode.BadGateway || response.status == HttpStatusCode.OK)
+        assertTrue(response.status != HttpStatusCode.Forbidden)
+    }
+
+    @Test
+    fun `GET reports forbidden without reports or admin`() = testApplication {
+        application {
+            module(
+                GatewayConfig.testDefaults(),
+                GatewayDeps(
+                    featureClient = featureClientWith("board"),
+                    backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
+                    tokenValidator = TokenValidator.accepting(),
+                ),
+            )
+        }
+        val response =
+            client.get("/reports/equipment-downtime?from=2026-07-22&to=2026-07-23") {
+                header(HttpHeaders.Authorization, "Bearer good")
+            }
+        assertEquals(HttpStatusCode.Forbidden, response.status)
+    }
 }
