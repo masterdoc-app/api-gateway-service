@@ -73,6 +73,7 @@ fun Application.installEquipmentRoutes(config: GatewayConfig, deps: GatewayDeps)
             readFeatures = listOf("map"),
             writeFeatures = listOf("engineer"),
         )
+        proxyPrefix("/geocode", config.mapServiceBaseUrl, client, deps, features = listOf("admin", "equipment"))
         proxyPrefix("/documents", config.documentServiceBaseUrl, client, deps, features = listOf("equipment"))
         proxyPrefix("/ai/technologist", config.technologistServiceBaseUrl, client, deps, features = listOf("equipment"))
         proxyPrefix("/ai/document-validator", config.technologistServiceBaseUrl, client, deps, features = listOf("equipment"))
