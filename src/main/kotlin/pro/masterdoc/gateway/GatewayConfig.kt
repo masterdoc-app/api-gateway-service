@@ -43,7 +43,7 @@ data class GatewayConfig(
                 blackBoxServiceBaseUrl =
                     System.getenv("BLACK_BOX_SERVICE_BASE_URL") ?: "http://127.0.0.1:8096",
                 aiMessageServiceBaseUrl =
-                    System.getenv("AI_MESSAGE_SERVICE_BASE_URL") ?: "http://127.0.0.1:8097",
+                    System.getenv("AI_MESSAGE_SERVICE_BASE_URL") ?: "http://127.0.0.1:8101",
                 mapServiceBaseUrl = System.getenv("MAP_SERVICE_BASE_URL") ?: "http://127.0.0.1:8100",
                 blackBoxInternalToken = System.getenv("BLACK_BOX_INTERNAL_TOKEN") ?: "",
                 aiMessageInternalToken = System.getenv("AI_MESSAGE_INTERNAL_TOKEN") ?: "",

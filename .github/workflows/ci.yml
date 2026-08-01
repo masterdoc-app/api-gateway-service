@@ -71,7 +71,7 @@ jobs:
               'BLACK_BOX_SERVICE_BASE_URL=http://host.docker.internal:8096' \
               'BLACK_BOX_INTERNAL_TOKEN=' \
               'MAP_SERVICE_BASE_URL=http://host.docker.internal:8100' \
-              'AI_MESSAGE_SERVICE_BASE_URL=http://host.docker.internal:8097' \
+              'AI_MESSAGE_SERVICE_BASE_URL=http://host.docker.internal:8101' \
               'AI_MESSAGE_INTERNAL_TOKEN=' \
               'CORS_ORIGINS=https://app.fixaverse.ru,https://copilot.fixaverse.ru,https://copilot.masterdoc.pro,http://localhost:8080' \
               > /etc/masterdoc-api-gateway/.env
@@ -92,7 +92,7 @@ jobs:
           upsert_env CORS_ORIGINS 'https://app.fixaverse.ru,https://copilot.fixaverse.ru,https://copilot.masterdoc.pro,http://localhost:8080'
           upsert_env MAINTENANCE_SERVICE_BASE_URL 'http://host.docker.internal:8098'
           upsert_env MAP_SERVICE_BASE_URL 'http://host.docker.internal:8100'
-          upsert_env AI_MESSAGE_SERVICE_BASE_URL 'http://host.docker.internal:8097'
+          upsert_env AI_MESSAGE_SERVICE_BASE_URL 'http://host.docker.internal:8101'
           if [ -n "${AI_MESSAGE_INTERNAL_TOKEN:-}" ]; then upsert_env AI_MESSAGE_INTERNAL_TOKEN "$AI_MESSAGE_INTERNAL_TOKEN"; fi
           chmod 600 /etc/masterdoc-api-gateway/.env
           REMOTE
