@@ -28,6 +28,7 @@ object ProductFeatures {
             FeatureDefinitionDto("engineer", "Инженер"),
             FeatureDefinitionDto("equipment", "Оборудование"),
             FeatureDefinitionDto("map", "Карта"),
+            FeatureDefinitionDto("reports", "Отчёты"),
             FeatureDefinitionDto("tickets", "Заявки"),
         )
 
