@@ -14,8 +14,10 @@ data class GatewayConfig(
     val documentServiceBaseUrl: String,
     val technologistServiceBaseUrl: String,
     val blackBoxServiceBaseUrl: String,
+    val aiMessageServiceBaseUrl: String,
     val mapServiceBaseUrl: String,
     val blackBoxInternalToken: String,
+    val aiMessageInternalToken: String,
     val corsOrigins: List<String>,
 ) {
     companion object {
@@ -40,8 +42,11 @@ data class GatewayConfig(
                     System.getenv("TECHNOLOGIST_SERVICE_BASE_URL") ?: "http://127.0.0.1:8095",
                 blackBoxServiceBaseUrl =
                     System.getenv("BLACK_BOX_SERVICE_BASE_URL") ?: "http://127.0.0.1:8096",
+                aiMessageServiceBaseUrl =
+                    System.getenv("AI_MESSAGE_SERVICE_BASE_URL") ?: "http://127.0.0.1:8097",
                 mapServiceBaseUrl = System.getenv("MAP_SERVICE_BASE_URL") ?: "http://127.0.0.1:8100",
                 blackBoxInternalToken = System.getenv("BLACK_BOX_INTERNAL_TOKEN") ?: "",
+                aiMessageInternalToken = System.getenv("AI_MESSAGE_INTERNAL_TOKEN") ?: "",
                 corsOrigins =
                     (System.getenv("CORS_ORIGINS") ?: "http://localhost:8080")
                         .split(",")
@@ -64,8 +69,10 @@ data class GatewayConfig(
                 documentServiceBaseUrl = "http://document.test",
                 technologistServiceBaseUrl = "http://technologist.test",
                 blackBoxServiceBaseUrl = "http://blackbox.test",
+                aiMessageServiceBaseUrl = "http://ai-message.test",
                 mapServiceBaseUrl = "http://map.test",
                 blackBoxInternalToken = "",
+                aiMessageInternalToken = "",
                 corsOrigins = listOf("http://localhost:8080"),
             )
     }

@@ -24,7 +24,8 @@ fun main() {
             "zitadelJwkSetUriConfigured=${config.zitadelJwkSetUri.isNotBlank()} " +
             "zitadelProjectIdConfigured=${config.zitadelProjectId.isNotBlank()} " +
             "zitadelMgmtTokenConfigured=${config.zitadelMgmtToken.isNotBlank()} " +
-            "blackBoxInternalTokenConfigured=${config.blackBoxInternalToken.isNotBlank()}",
+            "blackBoxInternalTokenConfigured=${config.blackBoxInternalToken.isNotBlank()} " +
+            "aiMessageInternalTokenConfigured=${config.aiMessageInternalToken.isNotBlank()}",
     )
     embeddedServer(Netty, port = config.port, host = "0.0.0.0") {
         module(config)
@@ -60,6 +61,7 @@ fun Application.module(
     installEquipmentRoutes(config, deps)
     installAdminUserRoutes(deps)
     installAdminAuditRoutes(deps)
+    installAiMessageRoutes(deps)
     installClientEventsRoutes(deps)
 }
 
@@ -67,6 +69,7 @@ data class GatewayDeps(
     val featureClient: FeatureServiceClient,
     val backendClient: BackendProxyClient,
     val blackBoxClient: BlackBoxClient = BlackBoxClient.noop(),
+    val aiMessageClient: AiMessageClient = AiMessageClient.noop(),
     val tokenValidator: TokenValidator,
     val zitadelTokenClient: ZitadelTokenClient =
         ZitadelTokenClient { throw UpstreamUnavailableException("zitadel token client not configured") },
@@ -81,6 +84,11 @@ data class GatewayDeps(
                     BlackBoxClient.http(
                         config.blackBoxServiceBaseUrl,
                         config.blackBoxInternalToken.takeIf { it.isNotBlank() },
+                    ),
+                aiMessageClient =
+                    AiMessageClient.http(
+                        config.aiMessageServiceBaseUrl,
+                        config.aiMessageInternalToken.takeIf { it.isNotBlank() },
                     ),
                 tokenValidator = TokenValidator.jwks(config.zitadelIssuer, config.zitadelJwkSetUri),
                 zitadelTokenClient = ZitadelTokenClient.http(config.zitadelIssuer),

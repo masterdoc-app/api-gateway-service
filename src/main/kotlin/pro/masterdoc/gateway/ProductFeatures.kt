@@ -21,6 +21,7 @@ object ProductFeatures {
     val ENTRIES: List<FeatureDefinitionDto> =
         listOf(
             FeatureDefinitionDto("admin", "Админ"),
+            FeatureDefinitionDto("ai", "ИИ"),
             FeatureDefinitionDto("black_box", "Чёрный ящик"),
             FeatureDefinitionDto("board", "Доска"),
             FeatureDefinitionDto("charts", "ППР"),

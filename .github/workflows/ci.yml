@@ -35,6 +35,7 @@ jobs:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           ZITADEL_PROJECT_ID: ${{ secrets.ZITADEL_PROJECT_ID }}
           ZITADEL_MGMT_TOKEN: ${{ secrets.ZITADEL_MGMT_TOKEN }}
+          AI_MESSAGE_INTERNAL_TOKEN: ${{ secrets.AI_MESSAGE_INTERNAL_TOKEN }}
         run: |
           set -euo pipefail
           if [ -z "${SSH_KEY:-}" ] || [ -z "${DEPLOY_HOST:-}" ]; then
@@ -48,6 +49,7 @@ jobs:
           ssh $SSH_OPTS "$DEPLOY_USER@$DEPLOY_HOST" env \
             "ZITADEL_PROJECT_ID=${ZITADEL_PROJECT_ID:-}" \
             "ZITADEL_MGMT_TOKEN=${ZITADEL_MGMT_TOKEN:-}" \
+            "AI_MESSAGE_INTERNAL_TOKEN=${AI_MESSAGE_INTERNAL_TOKEN:-}" \
             bash -s <<'REMOTE'
           set -euo pipefail
           mkdir -p /opt/api-gateway-service/deploy /etc/masterdoc-api-gateway
@@ -66,7 +68,11 @@ jobs:
               'MAINTENANCE_SERVICE_BASE_URL=http://host.docker.internal:8098' \
               'DOCUMENT_SERVICE_BASE_URL=http://host.docker.internal:8093' \
               'TECHNOLOGIST_SERVICE_BASE_URL=http://host.docker.internal:8095' \
+              'BLACK_BOX_SERVICE_BASE_URL=http://host.docker.internal:8096' \
+              'BLACK_BOX_INTERNAL_TOKEN=' \
               'MAP_SERVICE_BASE_URL=http://host.docker.internal:8100' \
+              'AI_MESSAGE_SERVICE_BASE_URL=http://host.docker.internal:8097' \
+              'AI_MESSAGE_INTERNAL_TOKEN=' \
               'CORS_ORIGINS=https://app.fixaverse.ru,https://copilot.fixaverse.ru,https://copilot.masterdoc.pro,http://localhost:8080' \
               > /etc/masterdoc-api-gateway/.env
             chmod 600 /etc/masterdoc-api-gateway/.env
@@ -86,6 +92,8 @@ jobs:
           upsert_env CORS_ORIGINS 'https://app.fixaverse.ru,https://copilot.fixaverse.ru,https://copilot.masterdoc.pro,http://localhost:8080'
           upsert_env MAINTENANCE_SERVICE_BASE_URL 'http://host.docker.internal:8098'
           upsert_env MAP_SERVICE_BASE_URL 'http://host.docker.internal:8100'
+          upsert_env AI_MESSAGE_SERVICE_BASE_URL 'http://host.docker.internal:8097'
+          if [ -n "${AI_MESSAGE_INTERNAL_TOKEN:-}" ]; then upsert_env AI_MESSAGE_INTERNAL_TOKEN "$AI_MESSAGE_INTERNAL_TOKEN"; fi
           chmod 600 /etc/masterdoc-api-gateway/.env
           REMOTE
           # shellcheck disable=SC2086
