@@ -49,7 +49,7 @@ class FeaturesRoutesTest {
         assertEquals(HttpStatusCode.OK, response.status)
         val body = json.parseToJsonElement(response.bodyAsText()).jsonObject
         val items = body["items"]!!.jsonArray
-        assertEquals(9, items.size)
+        assertEquals(10, items.size)
         assertEquals("admin", items[0].jsonObject["id"]!!.jsonPrimitive.content)
         assertEquals("Админ", items[0].jsonObject["titleRu"]!!.jsonPrimitive.content)
         assertTrue(items.any { it.jsonObject["id"]!!.jsonPrimitive.content == "ai" })
@@ -57,6 +57,7 @@ class FeaturesRoutesTest {
         assertTrue(items.any { it.jsonObject["id"]!!.jsonPrimitive.content == "board" })
         assertTrue(items.any { it.jsonObject["id"]!!.jsonPrimitive.content == "engineer" })
         assertTrue(items.any { it.jsonObject["id"]!!.jsonPrimitive.content == "map" })
+        assertTrue(items.any { it.jsonObject["id"]!!.jsonPrimitive.content == "reports" })
         assertTrue(items.none { it.jsonObject["id"]!!.jsonPrimitive.content == "copilot" })
     }
 }
