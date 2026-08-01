@@ -60,6 +60,7 @@ fun Application.module(
     installV1ProxyRoutes(deps)
     installEquipmentRoutes(config, deps)
     installAdminUserRoutes(deps)
+    installAdminRoleRoutes(deps)
     installAdminAuditRoutes(deps)
     installAiMessageRoutes(deps)
     installClientEventsRoutes(deps)
@@ -68,6 +69,7 @@ fun Application.module(
 data class GatewayDeps(
     val featureClient: FeatureServiceClient,
     val backendClient: BackendProxyClient,
+    val featureRolesClient: FeatureRolesClient = FeatureRolesClient.unconfigured(),
     val blackBoxClient: BlackBoxClient = BlackBoxClient.noop(),
     val aiMessageClient: AiMessageClient = AiMessageClient.noop(),
     val tokenValidator: TokenValidator,
@@ -80,6 +82,7 @@ data class GatewayDeps(
             GatewayDeps(
                 featureClient = FeatureServiceClient.http(config.featureServiceBaseUrl),
                 backendClient = BackendProxyClient.http(config.backendBaseUrl),
+                featureRolesClient = FeatureRolesClient.http(config.featureServiceBaseUrl),
                 blackBoxClient =
                     BlackBoxClient.http(
                         config.blackBoxServiceBaseUrl,

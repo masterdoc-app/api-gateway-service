@@ -10,6 +10,7 @@ import io.ktor.client.statement.bodyAsBytes
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.ByteArrayContent
 import org.slf4j.LoggerFactory
 
 private val clientsLog = LoggerFactory.getLogger("pro.masterdoc.gateway.Clients")
@@ -53,6 +54,82 @@ class HttpFeatureServiceClient(
                 client.request("$baseUrl/me") {
                     method = HttpMethod.Get
                     header(HttpHeaders.Authorization, authorizationHeader)
+                }
+            return UpstreamResult(
+                status = response.status,
+                contentType = response.headers[HttpHeaders.ContentType],
+                body = response.bodyAsBytes(),
+            )
+        } catch (e: Exception) {
+            clientsLog.error("event=upstream_unavailable service=feature-service cause=${e.message}")
+            throw UpstreamUnavailableException("feature-service unavailable", e)
+        }
+    }
+}
+
+interface FeatureRolesClient {
+    suspend fun getRoles(authorizationHeader: String, orgId: String): UpstreamResult
+
+    suspend fun updateRole(
+        authorizationHeader: String,
+        orgId: String,
+        roleId: String,
+        body: ByteArray,
+        contentType: String?,
+    ): UpstreamResult
+
+    companion object {
+        fun http(baseUrl: String): FeatureRolesClient = HttpFeatureRolesClient(baseUrl)
+
+        fun unconfigured(): FeatureRolesClient =
+            object : FeatureRolesClient {
+                override suspend fun getRoles(authorizationHeader: String, orgId: String): UpstreamResult =
+                    error("feature roles client not configured")
+
+                override suspend fun updateRole(
+                    authorizationHeader: String,
+                    orgId: String,
+                    roleId: String,
+                    body: ByteArray,
+                    contentType: String?,
+                ): UpstreamResult = error("feature roles client not configured")
+            }
+    }
+}
+
+class HttpFeatureRolesClient(
+    private val baseUrl: String,
+    private val client: HttpClient = HttpClient(CIO),
+) : FeatureRolesClient {
+    override suspend fun getRoles(authorizationHeader: String, orgId: String): UpstreamResult =
+        request(HttpMethod.Get, "$baseUrl/roles", authorizationHeader, orgId, null, null)
+
+    override suspend fun updateRole(
+        authorizationHeader: String,
+        orgId: String,
+        roleId: String,
+        body: ByteArray,
+        contentType: String?,
+    ): UpstreamResult =
+        request(HttpMethod.Put, "$baseUrl/roles/$roleId", authorizationHeader, orgId, body, contentType)
+
+    private suspend fun request(
+        method: HttpMethod,
+        url: String,
+        authorizationHeader: String,
+        orgId: String,
+        body: ByteArray?,
+        contentType: String?,
+    ): UpstreamResult {
+        try {
+            val response =
+                client.request(url) {
+                    this.method = method
+                    header(HttpHeaders.Authorization, authorizationHeader)
+                    header("X-Org-Id", orgId)
+                    if (body != null) {
+                        setBody(ByteArrayContent(body, contentType?.let { io.ktor.http.ContentType.parse(it) }))
+                    }
                 }
             return UpstreamResult(
                 status = response.status,
