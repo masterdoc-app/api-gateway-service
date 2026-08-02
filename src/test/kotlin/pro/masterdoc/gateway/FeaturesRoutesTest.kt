@@ -49,10 +49,16 @@ class FeaturesRoutesTest {
         assertEquals(HttpStatusCode.OK, response.status)
         val body = json.parseToJsonElement(response.bodyAsText()).jsonObject
         val items = body["items"]!!.jsonArray
-        assertEquals(10, items.size)
+        assertEquals(11, items.size)
         assertEquals("admin", items[0].jsonObject["id"]!!.jsonPrimitive.content)
         assertEquals("Админ", items[0].jsonObject["titleRu"]!!.jsonPrimitive.content)
         assertTrue(items.any { it.jsonObject["id"]!!.jsonPrimitive.content == "ai" })
+        assertTrue(
+            items.any {
+                it.jsonObject["id"]!!.jsonPrimitive.content == "asset_qr" &&
+                    it.jsonObject["titleRu"]!!.jsonPrimitive.content == "QR оборудования"
+            },
+        )
         assertTrue(items.any { it.jsonObject["id"]!!.jsonPrimitive.content == "black_box" })
         assertTrue(items.any { it.jsonObject["id"]!!.jsonPrimitive.content == "board" })
         assertTrue(items.any { it.jsonObject["id"]!!.jsonPrimitive.content == "engineer" })
