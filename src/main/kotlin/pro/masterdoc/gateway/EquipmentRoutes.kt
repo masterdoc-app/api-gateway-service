@@ -38,15 +38,7 @@ fun Application.installEquipmentRoutes(config: GatewayConfig, deps: GatewayDeps)
             readFeatures = listOf("equipment", "admin", "tickets"),
             writeFeatures = listOf("equipment", "admin"),
         )
-        proxyPrefix(
-            "/assets",
-            config.catalogServiceBaseUrl,
-            client,
-            deps,
-            readFeatures = listOf("equipment", "tickets"),
-            writeFeatures = listOf("equipment"),
-            scopeFilterHint = true,
-        )
+        installAssetProxyRoutes(config.catalogServiceBaseUrl, client, deps)
         proxyPrefix("/maintenance-maps", config.maintenanceServiceBaseUrl, client, deps, features = listOf("equipment", "charts"))
         proxyPrefix(
             "/work-orders",
@@ -79,6 +71,70 @@ fun Application.installEquipmentRoutes(config: GatewayConfig, deps: GatewayDeps)
         proxyPrefix("/ai/document-validator", config.technologistServiceBaseUrl, client, deps, features = listOf("equipment"))
         proxyPrefix("/ai/equipment-card", config.technologistServiceBaseUrl, client, deps, features = listOf("equipment"))
         proxyPrefix("/ai/mentor", config.technologistServiceBaseUrl, client, deps, features = listOf("engineer"))
+    }
+}
+
+/**
+ * assets auth:
+ * - POST /assets/{id}/qr: asset_qr only
+ * - GET /assets/by-qr/{token}: tickets|engineer|asset_qr|admin
+ * - other GETs: equipment|tickets
+ * - other writes: equipment
+ */
+private fun io.ktor.server.routing.Routing.installAssetProxyRoutes(
+    baseUrl: String,
+    client: HttpClient,
+    deps: GatewayDeps,
+) {
+    fun pathParts(uri: String): List<String> = uri.substringBefore('?').trim('/').split('/')
+
+    fun isGenerateQrPath(uri: String): Boolean {
+        val parts = pathParts(uri)
+        return parts.size == 3 &&
+            parts[0] == "assets" &&
+            parts[1].isNotBlank() &&
+            parts[2] == "qr"
+    }
+
+    fun isResolveQrPath(uri: String): Boolean {
+        val parts = pathParts(uri)
+        return parts.size == 3 &&
+            parts[0] == "assets" &&
+            parts[1] == "by-qr" &&
+            parts[2].isNotBlank()
+    }
+
+    fun io.ktor.server.routing.Route.registerAssetProxyHandler() {
+        handle {
+            val method = call.request.httpMethod
+            val uri = call.request.uri
+            val generateQr = method == HttpMethod.Post && isGenerateQrPath(uri)
+            val requiredFeatures =
+                when {
+                    generateQr -> listOf("asset_qr")
+                    method == HttpMethod.Get && isResolveQrPath(uri) ->
+                        listOf("tickets", "engineer", "asset_qr", "admin")
+                    method == HttpMethod.Get -> listOf("equipment", "tickets")
+                    else -> listOf("equipment")
+                }
+            if (!call.requireAnyFeature(deps, requiredFeatures)) return@handle
+            forward(
+                client,
+                baseUrl,
+                uri,
+                call,
+                deps,
+                scopeFilterHint = true,
+                scopeFilterOverride = if (generateQr) "0" else null,
+            )
+        }
+    }
+
+    route("/assets") {
+        route("{tail...}") {
+            registerAssetProxyHandler()
+        }
+        registerAssetProxyHandler()
     }
 }
 
@@ -191,6 +247,7 @@ private suspend fun forward(
     call: io.ktor.server.application.ApplicationCall,
     deps: GatewayDeps,
     scopeFilterHint: Boolean = false,
+    scopeFilterOverride: String? = null,
 ) {
     val orgId = call.attributes.getOrNull(OrgIdKey) ?: "default-org"
     val userId = call.attributes.getOrNull(UserIdKey) ?: "unknown"
@@ -210,7 +267,7 @@ private suspend fun forward(
                 header("X-User-Id", userId)
                 header("X-Caller-Features", callerFeatures.joinToString(","))
                 if (scopeFilterHint) {
-                    header("X-Scope-Filter", scopeFilterHeaderValue(callerFeatures))
+                    header("X-Scope-Filter", scopeFilterOverride ?: scopeFilterHeaderValue(callerFeatures))
                 }
                 if (bodyBytes != null) {
                     val contentTypeHeader = call.request.header(HttpHeaders.ContentType)

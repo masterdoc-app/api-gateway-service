@@ -22,6 +22,7 @@ object ProductFeatures {
         listOf(
             FeatureDefinitionDto("admin", "Админ"),
             FeatureDefinitionDto("ai", "ИИ"),
+            FeatureDefinitionDto("asset_qr", "QR оборудования"),
             FeatureDefinitionDto("black_box", "Чёрный ящик"),
             FeatureDefinitionDto("board", "Доска"),
             FeatureDefinitionDto("charts", "ППР"),
