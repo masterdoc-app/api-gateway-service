@@ -64,14 +64,7 @@ fun Application.installEquipmentRoutes(config: GatewayConfig, deps: GatewayDeps)
             deps,
             features = listOf("reports", "admin"),
         )
-        proxyPrefix(
-            "/user-scopes",
-            config.catalogServiceBaseUrl,
-            client,
-            deps,
-            readFeatures = listOf("admin", "board"),
-            writeFeatures = listOf("admin"),
-        )
+        installUserScopeProxyRoutes(config.catalogServiceBaseUrl, client, deps)
         proxyPrefix(
             "/engineer-locations",
             config.mapServiceBaseUrl,
@@ -86,6 +79,75 @@ fun Application.installEquipmentRoutes(config: GatewayConfig, deps: GatewayDeps)
         proxyPrefix("/ai/document-validator", config.technologistServiceBaseUrl, client, deps, features = listOf("equipment"))
         proxyPrefix("/ai/equipment-card", config.technologistServiceBaseUrl, client, deps, features = listOf("equipment"))
         proxyPrefix("/ai/mentor", config.technologistServiceBaseUrl, client, deps, features = listOf("engineer"))
+    }
+}
+
+/**
+ * user-scopes auth:
+ * - PUT: admin only
+ * - GET /user-scopes/{id}/covers/...: admin|board
+ * - GET /user-scopes/{id}: admin|board, or tickets|engineer reading **own** scope
+ */
+private fun io.ktor.server.routing.Routing.installUserScopeProxyRoutes(
+    baseUrl: String,
+    client: HttpClient,
+    deps: GatewayDeps,
+) {
+    fun targetUserId(uri: String): String? {
+        val path = uri.substringBefore('?')
+        val parts = path.trim('/').split('/')
+        // user-scopes/{userId}[/{...}]
+        if (parts.size < 2 || parts[0] != "user-scopes") return null
+        return parts[1].takeIf { it.isNotBlank() }
+    }
+
+    fun isCoversPath(uri: String): Boolean {
+        val parts = uri.substringBefore('?').trim('/').split('/')
+        return parts.size >= 4 && parts[0] == "user-scopes" && parts[2] == "covers"
+    }
+
+    route("/user-scopes") {
+        route("{tail...}") {
+            handle {
+                val method = call.request.httpMethod
+                val uri = call.request.uri
+                val allowed =
+                    when {
+                        method != HttpMethod.Get && method != HttpMethod.Put -> {
+                            call.respondText("Method Not Allowed", status = HttpStatusCode.MethodNotAllowed)
+                            false
+                        }
+                        method == HttpMethod.Put -> call.requireAnyFeature(deps, listOf("admin"))
+                        isCoversPath(uri) -> call.requireAnyFeature(deps, listOf("admin", "board"))
+                        else -> {
+                            // GET own or org-wide (admin/board)
+                            if (!call.requireAnyFeature(deps, listOf("admin", "board", "tickets", "engineer"))) {
+                                false
+                            } else {
+                                val features = call.attributes.getOrNull(CallerFeaturesKey).orEmpty()
+                                val orgWide = "admin" in features || "board" in features
+                                if (orgWide) {
+                                    true
+                                } else {
+                                    val self = call.attributes.getOrNull(UserIdKey)
+                                    val target = targetUserId(uri)
+                                    if (self != null && target != null && self == target) {
+                                        true
+                                    } else {
+                                        call.respondText("Forbidden", status = HttpStatusCode.Forbidden)
+                                        false
+                                    }
+                                }
+                            }
+                        }
+                    }
+                if (!allowed) return@handle
+                forward(client, baseUrl, uri, call, deps, scopeFilterHint = false)
+            }
+        }
+        handle {
+            call.respondText("Not Found", status = HttpStatusCode.NotFound)
+        }
     }
 }
 

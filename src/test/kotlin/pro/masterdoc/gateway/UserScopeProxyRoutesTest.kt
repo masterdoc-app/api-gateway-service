@@ -139,31 +139,91 @@ class UserScopeProxyRoutesTest {
     }
 
     @Test
-    fun `tickets cannot GET or PUT user-scopes`() = testApplication {
-        application {
-            module(
-                GatewayConfig.testDefaults(),
-                GatewayDeps(
-                    featureClient = featureClientWith("tickets"),
-                    backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
-                    tokenValidator = TokenValidator.accepting(),
-                ),
-            )
+    fun `tickets can GET own user-scopes but not others or PUT`() {
+        val catalogServer = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
+        catalogServer.createContext("/user-scopes/test-sub") { exchange ->
+            val body = """{"userId":"test-sub","siteIds":["ceh-1"],"assetIds":[]}""".toByteArray()
+            exchange.responseHeaders.add(HttpHeaders.ContentType, "application/json")
+            exchange.sendResponseHeaders(HttpStatusCode.OK.value, body.size.toLong())
+            exchange.responseBody.use { it.write(body) }
         }
+        catalogServer.start()
 
-        val getResponse =
-            client.get("/user-scopes/user-1") {
-                header(HttpHeaders.Authorization, "Bearer good")
-            }
-        assertEquals(HttpStatusCode.Forbidden, getResponse.status)
+        try {
+            testApplication {
+                application {
+                    module(
+                        GatewayConfig.testDefaults().copy(
+                            catalogServiceBaseUrl = "http://127.0.0.1:${catalogServer.address.port}",
+                        ),
+                        GatewayDeps(
+                            featureClient = featureClientWith("tickets"),
+                            backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
+                            tokenValidator = TokenValidator.accepting(subject = "test-sub"),
+                        ),
+                    )
+                }
 
-        val putResponse =
-            client.put("/user-scopes/user-1") {
-                header(HttpHeaders.Authorization, "Bearer good")
-                contentType(ContentType.Application.Json)
-                setBody("""{"siteIds":[],"assetIds":[]}""")
+                val own =
+                    client.get("/user-scopes/test-sub") {
+                        header(HttpHeaders.Authorization, "Bearer good")
+                    }
+                assertEquals(HttpStatusCode.OK, own.status)
+                assertTrue(own.bodyAsText().contains("ceh-1"))
+
+                val other =
+                    client.get("/user-scopes/user-1") {
+                        header(HttpHeaders.Authorization, "Bearer good")
+                    }
+                assertEquals(HttpStatusCode.Forbidden, other.status)
+
+                val putResponse =
+                    client.put("/user-scopes/test-sub") {
+                        header(HttpHeaders.Authorization, "Bearer good")
+                        contentType(ContentType.Application.Json)
+                        setBody("""{"siteIds":[],"assetIds":[]}""")
+                    }
+                assertEquals(HttpStatusCode.Forbidden, putResponse.status)
             }
-        assertEquals(HttpStatusCode.Forbidden, putResponse.status)
+        } finally {
+            catalogServer.stop(0)
+        }
+    }
+
+    @Test
+    fun `engineer can GET own user-scopes`() {
+        val catalogServer = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
+        catalogServer.createContext("/user-scopes/eng-1") { exchange ->
+            val body = """{"userId":"eng-1","siteIds":[],"assetIds":[]}""".toByteArray()
+            exchange.responseHeaders.add(HttpHeaders.ContentType, "application/json")
+            exchange.sendResponseHeaders(HttpStatusCode.OK.value, body.size.toLong())
+            exchange.responseBody.use { it.write(body) }
+        }
+        catalogServer.start()
+
+        try {
+            testApplication {
+                application {
+                    module(
+                        GatewayConfig.testDefaults().copy(
+                            catalogServiceBaseUrl = "http://127.0.0.1:${catalogServer.address.port}",
+                        ),
+                        GatewayDeps(
+                            featureClient = featureClientWith("engineer"),
+                            backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
+                            tokenValidator = TokenValidator.accepting(subject = "eng-1"),
+                        ),
+                    )
+                }
+                val response =
+                    client.get("/user-scopes/eng-1") {
+                        header(HttpHeaders.Authorization, "Bearer good")
+                    }
+                assertEquals(HttpStatusCode.OK, response.status)
+            }
+        } finally {
+            catalogServer.stop(0)
+        }
     }
 
     @Test
