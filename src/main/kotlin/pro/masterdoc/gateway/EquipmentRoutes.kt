@@ -76,8 +76,8 @@ fun Application.installEquipmentRoutes(config: GatewayConfig, deps: GatewayDeps)
 
 /**
  * assets auth:
- * - POST /assets/{id}/qr: asset_qr only
- * - GET /assets/by-qr/{token}: tickets|engineer|asset_qr|admin
+ * - GET /assets/{id}/qr.pdf: equipment|admin
+ * - GET /assets/by-qr/{token}: tickets|engineer|equipment|admin
  * - other GETs: equipment|tickets
  * - other writes: equipment
  */
@@ -88,12 +88,12 @@ private fun io.ktor.server.routing.Routing.installAssetProxyRoutes(
 ) {
     fun pathParts(uri: String): List<String> = uri.substringBefore('?').trim('/').split('/')
 
-    fun isGenerateQrPath(uri: String): Boolean {
+    fun isQrPdfPath(uri: String): Boolean {
         val parts = pathParts(uri)
         return parts.size == 3 &&
             parts[0] == "assets" &&
             parts[1].isNotBlank() &&
-            parts[2] == "qr"
+            parts[2] == "qr.pdf"
     }
 
     fun isResolveQrPath(uri: String): Boolean {
@@ -108,12 +108,12 @@ private fun io.ktor.server.routing.Routing.installAssetProxyRoutes(
         handle {
             val method = call.request.httpMethod
             val uri = call.request.uri
-            val generateQr = method == HttpMethod.Post && isGenerateQrPath(uri)
             val requiredFeatures =
                 when {
-                    generateQr -> listOf("asset_qr")
                     method == HttpMethod.Get && isResolveQrPath(uri) ->
-                        listOf("tickets", "engineer", "asset_qr", "admin")
+                        listOf("tickets", "engineer", "equipment", "admin")
+                    method == HttpMethod.Get && isQrPdfPath(uri) ->
+                        listOf("equipment", "admin")
                     method == HttpMethod.Get -> listOf("equipment", "tickets")
                     else -> listOf("equipment")
                 }
@@ -125,7 +125,6 @@ private fun io.ktor.server.routing.Routing.installAssetProxyRoutes(
                 call,
                 deps,
                 scopeFilterHint = true,
-                scopeFilterOverride = if (generateQr) "0" else null,
             )
         }
     }

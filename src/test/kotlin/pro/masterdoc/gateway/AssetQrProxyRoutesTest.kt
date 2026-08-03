@@ -47,28 +47,38 @@ class AssetQrProxyRoutesTest {
     }
 
     @Test
-    fun `equipment cannot generate asset qr`() = testApplication {
-        application {
-            module(
-                GatewayConfig.testDefaults(),
-                GatewayDeps(
-                    featureClient = featureClientWith("equipment"),
-                    backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
-                    tokenValidator = TokenValidator.accepting(),
-                ),
-            )
-        }
+    fun `equipment write gate proxies legacy asset qr post without special handling`() {
+        val catalogServer = jsonServer("/assets/asset-1/qr")
 
-        val response =
-            client.post("/assets/asset-1/qr") {
-                header(HttpHeaders.Authorization, "Bearer good")
+        try {
+            testApplication {
+                application {
+                    module(
+                        GatewayConfig.testDefaults().copy(
+                            catalogServiceBaseUrl = "http://127.0.0.1:${catalogServer.address.port}",
+                        ),
+                        GatewayDeps(
+                            featureClient = featureClientWith("equipment"),
+                            backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
+                            tokenValidator = TokenValidator.accepting(),
+                        ),
+                    )
+                }
+
+                val response =
+                    client.post("/assets/asset-1/qr") {
+                        header(HttpHeaders.Authorization, "Bearer good")
+                    }
+
+                assertEquals(HttpStatusCode.OK, response.status)
             }
-
-        assertEquals(HttpStatusCode.Forbidden, response.status)
+        } finally {
+            catalogServer.stop(0)
+        }
     }
 
     @Test
-    fun `admin without asset qr cannot generate asset qr`() = testApplication {
+    fun `admin without equipment cannot write asset qr post`() = testApplication {
         application {
             module(
                 GatewayConfig.testDefaults(),
@@ -89,34 +99,74 @@ class AssetQrProxyRoutesTest {
     }
 
     @Test
-    fun `asset qr feature can generate qr org-wide`() {
-        var scopeFilter: String? = null
-        val catalogServer = jsonServer("/assets/asset-1/qr") { headers ->
-            scopeFilter = headers.getFirst("X-Scope-Filter")
+    fun `removed asset qr feature cannot authorize writes`() = testApplication {
+        application {
+            module(
+                GatewayConfig.testDefaults(),
+                GatewayDeps(
+                    featureClient = featureClientWith("asset_qr"),
+                    backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
+                    tokenValidator = TokenValidator.accepting(),
+                ),
+            )
         }
 
-        try {
-            testApplication {
-                application {
-                    module(
-                        GatewayConfig.testDefaults().copy(
-                            catalogServiceBaseUrl = "http://127.0.0.1:${catalogServer.address.port}",
-                        ),
-                        GatewayDeps(
-                            featureClient = featureClientWith("asset_qr"),
-                            backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
-                            tokenValidator = TokenValidator.accepting(),
-                        ),
-                    )
-                }
+        val response =
+            client.post("/assets/asset-1/qr") {
+                header(HttpHeaders.Authorization, "Bearer good")
+            }
 
-                val response =
-                    client.post("/assets/asset-1/qr") {
-                        header(HttpHeaders.Authorization, "Bearer good")
+        assertEquals(HttpStatusCode.Forbidden, response.status)
+    }
+
+    @Test
+    fun `tickets cannot download asset qr pdf`() = testApplication {
+        application {
+            module(
+                GatewayConfig.testDefaults(),
+                GatewayDeps(
+                    featureClient = featureClientWith("tickets"),
+                    backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
+                    tokenValidator = TokenValidator.accepting(),
+                ),
+            )
+        }
+
+        val response =
+            client.get("/assets/asset-1/qr.pdf") {
+                header(HttpHeaders.Authorization, "Bearer good")
+            }
+
+        assertEquals(HttpStatusCode.Forbidden, response.status)
+    }
+
+    @Test
+    fun `equipment and admin can download asset qr pdf`() {
+        val catalogServer = jsonServer("/assets/asset-1/qr.pdf")
+
+        try {
+            listOf("equipment", "admin").forEach { feature ->
+                testApplication {
+                    application {
+                        module(
+                            GatewayConfig.testDefaults().copy(
+                                catalogServiceBaseUrl = "http://127.0.0.1:${catalogServer.address.port}",
+                            ),
+                            GatewayDeps(
+                                featureClient = featureClientWith(feature),
+                                backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
+                                tokenValidator = TokenValidator.accepting(),
+                            ),
+                        )
                     }
 
-                assertEquals(HttpStatusCode.OK, response.status)
-                assertEquals("0", scopeFilter)
+                    val response =
+                        client.get("/assets/asset-1/qr.pdf") {
+                            header(HttpHeaders.Authorization, "Bearer good")
+                        }
+
+                    assertEquals(HttpStatusCode.OK, response.status, feature)
+                }
             }
         } finally {
             catalogServer.stop(0)
@@ -159,11 +209,11 @@ class AssetQrProxyRoutesTest {
     }
 
     @Test
-    fun `engineer and admin can resolve asset qr`() {
+    fun `engineer equipment and admin can resolve asset qr`() {
         val catalogServer = jsonServer("/assets/by-qr/token-1")
 
         try {
-            listOf("engineer", "admin").forEach { feature ->
+            listOf("engineer", "equipment", "admin").forEach { feature ->
                 testApplication {
                     application {
                         module(

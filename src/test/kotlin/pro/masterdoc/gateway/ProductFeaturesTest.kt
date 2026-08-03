@@ -25,12 +25,11 @@ class ProductFeaturesTest {
     }
 
     @Test
-    fun `catalog excludes copilot and includes ai and asset qr`() {
+    fun `catalog excludes removed features and includes ai`() {
         assertEquals(
             listOf(
                 "admin",
                 "ai",
-                "asset_qr",
                 "black_box",
                 "board",
                 "charts",
@@ -42,9 +41,6 @@ class ProductFeaturesTest {
             ),
             ProductFeatures.catalog().items.map { it.id },
         )
-        assertEquals(
-            FeatureDefinitionDto("asset_qr", "QR оборудования"),
-            ProductFeatures.catalog().items.single { it.id == "asset_qr" },
-        )
+        assertEquals("Unknown feature: asset_qr", ProductFeatures.validate(listOf("asset_qr")))
     }
 }
