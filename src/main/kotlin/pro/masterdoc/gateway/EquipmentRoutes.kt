@@ -75,6 +75,14 @@ fun Application.installEquipmentRoutes(config: GatewayConfig, deps: GatewayDeps)
             readFeatures = listOf("board", "engineer", "tickets"),
             writeFeatures = listOf("board", "engineer", "tickets"),
         )
+        proxyPrefix(
+            "/comments",
+            config.commentServiceBaseUrl,
+            client,
+            deps,
+            readFeatures = listOf("board", "engineer", "tickets"),
+            writeFeatures = listOf("board", "engineer", "tickets"),
+        )
         proxyPrefix("/ai/technologist", config.technologistServiceBaseUrl, client, deps, features = listOf("equipment"))
         proxyPrefix("/ai/document-validator", config.technologistServiceBaseUrl, client, deps, features = listOf("equipment"))
         proxyPrefix("/ai/equipment-card", config.technologistServiceBaseUrl, client, deps, features = listOf("equipment"))

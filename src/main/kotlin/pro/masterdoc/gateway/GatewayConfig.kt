@@ -13,6 +13,7 @@ data class GatewayConfig(
     val maintenanceServiceBaseUrl: String,
     val documentServiceBaseUrl: String,
     val attachmentServiceBaseUrl: String,
+    val commentServiceBaseUrl: String,
     val technologistServiceBaseUrl: String,
     val blackBoxServiceBaseUrl: String,
     val aiMessageServiceBaseUrl: String,
@@ -41,6 +42,8 @@ data class GatewayConfig(
                 documentServiceBaseUrl = System.getenv("DOCUMENT_SERVICE_BASE_URL") ?: "http://127.0.0.1:8093",
                 attachmentServiceBaseUrl =
                     System.getenv("ATTACHMENT_SERVICE_BASE_URL") ?: "http://127.0.0.1:8102",
+                commentServiceBaseUrl =
+                    System.getenv("COMMENT_SERVICE_BASE_URL") ?: "http://127.0.0.1:8103",
                 technologistServiceBaseUrl =
                     System.getenv("TECHNOLOGIST_SERVICE_BASE_URL") ?: "http://127.0.0.1:8095",
                 blackBoxServiceBaseUrl =
@@ -71,6 +74,7 @@ data class GatewayConfig(
                 maintenanceServiceBaseUrl = "http://maintenance.test",
                 documentServiceBaseUrl = "http://document.test",
                 attachmentServiceBaseUrl = "http://attachment.test",
+                commentServiceBaseUrl = "http://comment.test",
                 technologistServiceBaseUrl = "http://technologist.test",
                 blackBoxServiceBaseUrl = "http://blackbox.test",
                 aiMessageServiceBaseUrl = "http://ai-message.test",
