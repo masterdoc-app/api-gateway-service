@@ -136,7 +136,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/TokenResponse"
         "400":
-          description: email, password, or client_id is blank or malformed
+          description: Request JSON is malformed, or email, password, or client_id is blank
         "401":
           description: Invalid email or password
         "502":

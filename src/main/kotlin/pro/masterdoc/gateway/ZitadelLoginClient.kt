@@ -22,6 +22,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
+private val zitadelLoginJson = Json { ignoreUnknownKeys = true }
+
 sealed interface ZitadelLoginResult {
     data class Code(
         val code: String,
@@ -30,6 +32,15 @@ sealed interface ZitadelLoginResult {
     ) : ZitadelLoginResult
 
     data object InvalidCredentials : ZitadelLoginResult
+}
+
+internal sealed interface SessionResponse {
+    data class Authenticated(
+        val sessionId: String,
+        val sessionToken: String,
+    ) : SessionResponse
+
+    data object InvalidCredentials : SessionResponse
 }
 
 fun interface ZitadelLoginClient {
@@ -51,7 +62,7 @@ internal class HttpZitadelLoginClient(
         },
     private val secureRandom: SecureRandom = SecureRandom(),
 ) : ZitadelLoginClient {
-    private val json = Json { ignoreUnknownKeys = true }
+    private val json = zitadelLoginJson
 
     override suspend fun loginWithPassword(
         email: String,
@@ -63,7 +74,11 @@ internal class HttpZitadelLoginClient(
         val state = randomBase64Url(24)
         val authRequestId = startAuthRequest(clientId, challenge, state)
 
-        val session = createSession(email, password) ?: return ZitadelLoginResult.InvalidCredentials
+        val session =
+            when (val response = createSession(email, password)) {
+                SessionResponse.InvalidCredentials -> return ZitadelLoginResult.InvalidCredentials
+                is SessionResponse.Authenticated -> response
+            }
         val code = finalizeAuthRequest(authRequestId, session)
         return ZitadelLoginResult.Code(code, verifier, config.nativeRedirectUri)
     }
@@ -97,7 +112,7 @@ internal class HttpZitadelLoginClient(
             ?: throw UpstreamUnavailableException("Zitadel authorize redirect missing auth request id")
     }
 
-    private suspend fun createSession(email: String, password: String): ZitadelSession? {
+    private suspend fun createSession(email: String, password: String): SessionResponse {
         val response =
             upstream("session endpoint") {
                 client.post("${config.zitadelIssuer.trimEnd('/')}/v2/sessions") {
@@ -116,21 +131,15 @@ internal class HttpZitadelLoginClient(
                     )
                 }
             }
-        if (response.status == HttpStatusCode.BadRequest ||
-            response.status == HttpStatusCode.Unauthorized ||
-            response.status == HttpStatusCode.Forbidden
-        ) {
-            return null
-        }
-        if (!response.status.isSuccess()) {
-            throw UpstreamUnavailableException("Zitadel session endpoint returned ${response.status.value}")
-        }
-        return decode("session endpoint", response.bodyAsText())
+        return parseSessionResponse(
+            response.status,
+            upstreamBody(response, "session endpoint"),
+        )
     }
 
     private suspend fun finalizeAuthRequest(
         authRequestId: String,
-        session: ZitadelSession,
+        session: SessionResponse.Authenticated,
     ): String {
         val response =
             upstream("auth request endpoint") {
@@ -155,9 +164,12 @@ internal class HttpZitadelLoginClient(
         if (!response.status.isSuccess()) {
             throw UpstreamUnavailableException("Zitadel auth request endpoint returned ${response.status.value}")
         }
-        val callback = decode<FinalizeAuthResponse>("auth request endpoint", response.bodyAsText()).callbackUrl
-        return URLBuilder(callback).parameters["code"]
-            ?: throw UpstreamUnavailableException("Zitadel callback URL missing authorization code")
+        val callback =
+            decode<FinalizeAuthResponse>(
+                "auth request endpoint",
+                upstreamBody(response, "auth request endpoint"),
+            ).callbackUrl
+        return parseCodeFromCallback(callback)
     }
 
     private suspend fun upstream(endpoint: String, request: suspend () -> io.ktor.client.statement.HttpResponse) =
@@ -167,6 +179,16 @@ internal class HttpZitadelLoginClient(
             throw e
         } catch (e: Exception) {
             throw UpstreamUnavailableException("Zitadel $endpoint unavailable", e)
+        }
+
+    private suspend fun upstreamBody(
+        response: io.ktor.client.statement.HttpResponse,
+        endpoint: String,
+    ): String =
+        try {
+            response.bodyAsText()
+        } catch (e: Exception) {
+            throw UpstreamUnavailableException("Zitadel $endpoint response unavailable", e)
         }
 
     private inline fun <reified T> decode(endpoint: String, body: String): T =
@@ -181,6 +203,47 @@ internal class HttpZitadelLoginClient(
 
     private fun base64Url(bytes: ByteArray): String =
         Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
+}
+
+internal fun parseSessionResponse(status: HttpStatusCode, body: String): SessionResponse {
+    if (status == HttpStatusCode.Unauthorized || status == HttpStatusCode.Forbidden) {
+        throw UpstreamUnavailableException(
+            "Zitadel session endpoint rejected gateway credentials (${status.value})",
+        )
+    }
+    if (status.isSuccess()) {
+        val session =
+            try {
+                zitadelLoginJson.decodeFromString<ZitadelSessionPayload>(body)
+            } catch (e: Exception) {
+                throw UpstreamUnavailableException("Invalid response from Zitadel session endpoint", e)
+            }
+        return SessionResponse.Authenticated(session.sessionId, session.sessionToken)
+    }
+    if (status in setOf(HttpStatusCode.BadRequest, HttpStatusCode.NotFound) &&
+        isCredentialFailure(body)
+    ) {
+        return SessionResponse.InvalidCredentials
+    }
+    throw UpstreamUnavailableException("Zitadel session endpoint returned ${status.value}")
+}
+
+internal fun parseCodeFromCallback(callbackUrl: String): String =
+    URLBuilder(callbackUrl).parameters["code"]
+        ?: throw UpstreamUnavailableException("Zitadel callback URL missing authorization code")
+
+private fun isCredentialFailure(body: String): Boolean {
+    val normalized = body.lowercase()
+    return listOf(
+        "command-3m0fs",
+        "command-jlk35",
+        "command-sfa3t",
+        "password is invalid",
+        "invalid password",
+        "could not verify password",
+        "user could not be found",
+        "user not found",
+    ).any(normalized::contains)
 }
 
 @Serializable
@@ -199,7 +262,7 @@ private data class SessionUserCheck(val loginName: String)
 private data class SessionPasswordCheck(val password: String)
 
 @Serializable
-private data class ZitadelSession(
+private data class ZitadelSessionPayload(
     @SerialName("sessionId") val sessionId: String,
     @SerialName("sessionToken") val sessionToken: String,
 )
