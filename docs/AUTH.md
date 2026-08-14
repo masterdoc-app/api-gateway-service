@@ -8,13 +8,16 @@
 | Метод | Зачем |
 |-------|--------|
 | `GET /auth/url` | Получить ссылку на страницу логина |
+| `POST /auth/login` | Android: войти по email/паролю внутри приложения, без браузера |
 | `POST /auth/token` | Обменять `code` или `refresh_token` на токены |
 | `GET /me` | Кто я и какие фичи (уже с Bearer) |
 | `/admin/users*` | Приглашение и управление пользователями (Bearer + feature `admin`; см. `openapi.yaml`) |
 
-Страница ввода пароля — на Zitadel (браузер). Обмен кода на токены — **через gateway**.
+Web использует страницу ввода пароля Zitadel в браузере. Android отправляет email/пароль
+на gateway `POST /auth/login`; gateway не хранит пароль и передаёт его в Zitadel Session API.
+В обоих случаях код обменивается на токены через gateway.
 
-## Пошагово
+## Web: пошагово
 
 1. Клиент: `GET /auth/url` → получает `authUrl`.
 2. Открывает `authUrl` в браузере / WebView / Custom Tab.
@@ -30,9 +33,21 @@
 8. Клиент сохраняет токены и ходит в API: `Authorization: Bearer <access_token>`.
 9. Когда access истёк — снова `POST /auth/token` с `grant_type=refresh_token`.
 
+## Android: вход без браузера
+
+1. Клиент отправляет JSON `{email, password, client_id}` в `POST /auth/login`.
+2. Gateway создаёт PKCE и OIDC auth request с redirect URI `masterdoc://auth/callback`.
+3. Gateway проверяет логин/пароль через Zitadel Session API и финализирует auth request.
+4. Полученный code gateway обменивает через Zitadel token endpoint.
+5. Клиент получает обычные `access_token`, `refresh_token`, `id_token` и дальше использует
+   тот же `GET /me` и `POST /auth/token` для refresh.
+
+Пароль не сохраняется и не логируется gateway. `401` всегда означает общее
+«неверный email или пароль», без раскрытия существования пользователя.
+
 ## Важно
 
 - Один swagger / один `base_url` для REST — gateway.
 - `POST /auth/token` принимает оба grant: code и refresh.
-- UI логина остаётся на IdP (`auth.fixaverse.ru`); это нормально для OIDC.
+- Web UI логина остаётся на IdP (`auth.fixaverse.ru`); Android использует BFF login без браузера.
 - Gateway на VPS резолвит IdP через `extra_hosts` → host nginx (DNS с контейнера часто недоступен).

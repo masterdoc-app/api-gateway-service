@@ -27,7 +27,7 @@ PORT=8083
 ZITADEL_ISSUER=https://auth.fixaverse.ru
 ZITADEL_JWK_SET_URI=https://auth.fixaverse.ru/oauth/v2/keys
 ZITADEL_PROJECT_ID=<masterdoc-toir-project-id>
-ZITADEL_MGMT_TOKEN=<pat-with-user-and-grant-management>
+ZITADEL_MGMT_TOKEN=<pat-with-user-grant-management-and-iam-login-client>
 FEATURE_SERVICE_BASE_URL=http://127.0.0.1:8082
 BACKEND_BASE_URL=http://127.0.0.1:8081
 CORS_ORIGINS=https://app.fixaverse.ru,https://copilot.fixaverse.ru,https://copilot.masterdoc.pro,http://localhost:8080
@@ -42,12 +42,15 @@ Green slot uses `PORT=8084` via compose.
 | Variable | Purpose |
 |----------|---------|
 | `ZITADEL_PROJECT_ID` | Project for role grants (e.g. `masterdoc-toir`) |
-| `ZITADEL_MGMT_TOKEN` | Personal access token (PAT) with rights to manage users and grants in client orgs |
+| `ZITADEL_MGMT_TOKEN` | Server-only PAT for user/grant management and Android Session API login |
 
 Admin org scoping comes from JWT (ambient `TenantContext`), not from gateway env: prefer `urn:zitadel:iam:org:id`, else `urn:zitadel:iam:user:resourceowner:id` (OIDC scope `urn:zitadel:iam:user:resourceowner` on the client). Platform `ZITADEL_ORG_ID` remains for **`masterdoc-zitadel` Terraform only**; the PAT must be allowed to manage users and grants **across client orgs**.
 
 - PAT is **server-only** — never ship to browser, mobile, or admin SPA bundles.
 - Prefer a **dedicated machine user** service account with minimal IAM; do not reuse a human admin password.
+- Android `POST /auth/login` reuses this PAT for `/v2/sessions` and OIDC auth-request finalize.
+  Its service user must have the Zitadel **`IAM_LOGIN_CLIENT`** role in addition to the
+  org-level user/grant management roles.
 - If unset, admin routes return `502` with a misconfiguration message on first Zitadel call.
 - See `openapi.yaml` for `/admin/users*` contract; callers still need Bearer JWT + feature `admin`.
 
@@ -59,7 +62,7 @@ Admin org scoping comes from JWT (ambient `TenantContext`), not from gateway env
 | `DEPLOY_USER` | SSH user |
 | `DEPLOY_HOST` | VPS host |
 | `ZITADEL_PROJECT_ID` | Project for role grants, e.g. `382623622436487171` (masterdoc-toir) |
-| `ZITADEL_MGMT_TOKEN` | PAT with user/grant management. Prefer `terraform-masterdoc` (`ZITADEL_TOKEN` in masterdoc-zitadel). If using bootstrap `login-client`, grant it **ORG_OWNER** (or at least `ORG_USER_MANAGER`) on each client org via workflow **Ensure Mgmt PAT Org Member**. |
+| `ZITADEL_MGMT_TOKEN` | PAT with user/grant management plus **IAM_LOGIN_CLIENT**. Prefer `terraform-masterdoc` (`ZITADEL_TOKEN` in masterdoc-zitadel). If using bootstrap `login-client`, grant it **ORG_OWNER** (or at least `ORG_USER_MANAGER`) on each client org via workflow **Ensure Mgmt PAT Org Member**. |
 
 Env file on VPS is not committed. Deploy job upserts the two `ZITADEL_*` admin vars when secrets are set.
 

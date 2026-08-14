@@ -7,6 +7,7 @@ info:
     REST-клиент знает только этот host (см. docs/AUTH.md).
 
     - `GET /auth/url` — куда открыть браузер для логина (страница Zitadel)
+    - `POST /auth/login` — Android BFF login без браузера (Zitadel Session API)
     - `POST /auth/token` — обмен code / refresh на токены (BFF → Zitadel)
     - `GET /me` — userInfo + features (нужен Bearer JWT)
     - `/admin/users*` — invite / list / features / resend / delete (Bearer + feature `admin`)
@@ -107,6 +108,39 @@ paths:
           description: Upstream OAuth error (invalid_grant, …) — body as from Zitadel
         "502":
           description: Zitadel unavailable
+
+  /auth/login:
+    post:
+      operationId: postAuthLogin
+      summary: Android password login without opening a browser
+      description: |
+        Gateway creates a Zitadel session, finalizes an OIDC Authorization Code + PKCE
+        request, and returns the token endpoint response. Passwords are sent only to
+        Zitadel and are never stored by the gateway.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthLoginRequest"
+            example:
+              email: user@company.ru
+              password: "..."
+              client_id: native-app-id
+      responses:
+        "200":
+          description: Token response from Zitadel
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+        "400":
+          description: email, password, or client_id is blank or malformed
+        "401":
+          description: Invalid email or password
+        "502":
+          description: Zitadel unavailable or returned an unexpected response
 
   /me:
     get:
@@ -426,6 +460,20 @@ components:
           type: string
           format: uri
           example: https://auth.fixaverse.ru/oauth/v2/authorize
+
+    AuthLoginRequest:
+      type: object
+      required: [email, password, client_id]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        client_id:
+          type: string
+          description: Native OIDC application client id
 
     TokenResponse:
       type: object
