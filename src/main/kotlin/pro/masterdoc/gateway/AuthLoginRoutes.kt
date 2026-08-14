@@ -4,6 +4,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.Parameters
 import io.ktor.http.formUrlEncode
+import io.ktor.http.isSuccess
 import io.ktor.server.application.Application
 import io.ktor.server.application.call
 import io.ktor.server.request.receive
@@ -61,6 +62,11 @@ fun Application.installAuthLoginRoutes(deps: GatewayDeps) {
                                 append("code_verifier", login.codeVerifier)
                             }.formUrlEncode()
                         val upstream = deps.zitadelTokenClient.exchange(formBody)
+                        if (!upstream.status.isSuccess()) {
+                            throw UpstreamUnavailableException(
+                                "Zitadel token endpoint returned ${upstream.status.value}",
+                            )
+                        }
                         val contentType =
                             upstream.contentType?.let(ContentType::parse)
                                 ?: ContentType.Application.Json

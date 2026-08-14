@@ -144,4 +144,44 @@ class AuthLoginRoutesTest {
             }
         assertEquals(HttpStatusCode.BadGateway, response.status)
     }
+
+    @Test
+    fun `POST auth login returns 502 when token exchange is rejected`() = testApplication {
+        application {
+            module(
+                GatewayConfig.testDefaults(),
+                GatewayDeps(
+                    featureClient = FeatureServiceClient { error("unused") },
+                    backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
+                    tokenValidator = TokenValidator.rejecting(),
+                    zitadelLoginClient =
+                        ZitadelLoginClient { _, _, _ ->
+                            ZitadelLoginResult.Code(
+                                code = "auth-code",
+                                codeVerifier = "verifier",
+                                redirectUri = "masterdoc://auth/callback",
+                            )
+                        },
+                    zitadelTokenClient =
+                        ZitadelTokenClient {
+                            UpstreamResult(
+                                HttpStatusCode.Unauthorized,
+                                "application/json",
+                                """{"error":"invalid_client"}""".toByteArray(),
+                            )
+                        },
+                ),
+            )
+        }
+        val response =
+            client.post("/auth/login") {
+                setBody(
+                    TextContent(
+                        """{"email":"a@b.c","password":"secret","client_id":"native"}""",
+                        ContentType.Application.Json,
+                    ),
+                )
+            }
+        assertEquals(HttpStatusCode.BadGateway, response.status)
+    }
 }
