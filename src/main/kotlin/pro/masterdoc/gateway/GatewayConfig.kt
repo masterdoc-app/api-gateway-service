@@ -21,6 +21,9 @@ data class GatewayConfig(
     val blackBoxInternalToken: String,
     val aiMessageInternalToken: String,
     val corsOrigins: List<String>,
+    val nativeRedirectUri: String = "masterdoc://auth/callback",
+    val oidcScopes: String =
+        "openid profile email offline_access urn:zitadel:iam:user:resourceowner",
 ) {
     companion object {
         fun fromEnv(): GatewayConfig =
@@ -58,6 +61,11 @@ data class GatewayConfig(
                         .split(",")
                         .map { it.trim() }
                         .filter { it.isNotEmpty() },
+                nativeRedirectUri =
+                    System.getenv("NATIVE_REDIRECT_URI") ?: "masterdoc://auth/callback",
+                oidcScopes =
+                    System.getenv("OIDC_SCOPES")
+                        ?: "openid profile email offline_access urn:zitadel:iam:user:resourceowner",
             )
 
         fun testDefaults(): GatewayConfig =
