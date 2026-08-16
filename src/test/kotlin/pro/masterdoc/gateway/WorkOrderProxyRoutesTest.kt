@@ -250,4 +250,69 @@ class WorkOrderProxyRoutesTest {
             }
         assertEquals(HttpStatusCode.Forbidden, response.status)
     }
+
+    @Test
+    fun `GET work-order by id allowed with reports feature`() = testApplication {
+        application {
+            module(
+                GatewayConfig.testDefaults().copy(dashboardServiceBaseUrl = "http://127.0.0.1:1"),
+                GatewayDeps(
+                    featureClient = featureClientWith("reports"),
+                    backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
+                    tokenValidator = TokenValidator.accepting(),
+                ),
+            )
+        }
+        val response =
+            client.get("/work-orders/wo-1") {
+                header(HttpHeaders.Authorization, "Bearer good")
+            }
+        assertTrue(response.status == HttpStatusCode.BadGateway || response.status == HttpStatusCode.OK)
+        assertTrue(response.status != HttpStatusCode.Forbidden)
+    }
+
+    @Test
+    fun `GET work-orders list forbidden with only reports feature`() = testApplication {
+        application {
+            module(
+                GatewayConfig.testDefaults(),
+                GatewayDeps(
+                    featureClient = featureClientWith("reports"),
+                    backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
+                    tokenValidator = TokenValidator.accepting(),
+                ),
+            )
+        }
+        val list =
+            client.get("/work-orders") {
+                header(HttpHeaders.Authorization, "Bearer good")
+            }
+        assertEquals(HttpStatusCode.Forbidden, list.status)
+        val board =
+            client.get("/work-orders/board") {
+                header(HttpHeaders.Authorization, "Bearer good")
+            }
+        assertEquals(HttpStatusCode.Forbidden, board.status)
+    }
+
+    @Test
+    fun `PATCH work-orders forbidden with only reports feature`() = testApplication {
+        application {
+            module(
+                GatewayConfig.testDefaults(),
+                GatewayDeps(
+                    featureClient = featureClientWith("reports"),
+                    backendClient = BackendProxyClient { _, _, _, _ -> error("unused") },
+                    tokenValidator = TokenValidator.accepting(),
+                ),
+            )
+        }
+        val response =
+            client.patch("/work-orders/wo-1") {
+                header(HttpHeaders.Authorization, "Bearer good")
+                contentType(ContentType.Application.Json)
+                setBody("""{"status":"in_progress"}""")
+            }
+        assertEquals(HttpStatusCode.Forbidden, response.status)
+    }
 }

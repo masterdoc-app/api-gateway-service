@@ -19,6 +19,7 @@ import io.ktor.server.request.receiveChannel
 import io.ktor.server.request.uri
 import io.ktor.server.response.respondBytes
 import io.ktor.server.response.respondText
+import io.ktor.server.routing.get
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import io.ktor.utils.io.readRemaining
@@ -40,6 +41,24 @@ fun Application.installEquipmentRoutes(config: GatewayConfig, deps: GatewayDeps)
         )
         installAssetProxyRoutes(config.catalogServiceBaseUrl, client, deps)
         proxyPrefix("/maintenance-maps", config.maintenanceServiceBaseUrl, client, deps, features = listOf("equipment", "charts"))
+        get("/work-orders/{id}") {
+            val id = call.parameters["id"].orEmpty()
+            val readGate =
+                if (id == "board") {
+                    listOf("board", "engineer", "tickets")
+                } else {
+                    listOf("board", "engineer", "tickets", "reports")
+                }
+            if (!call.requireAnyFeature(deps, readGate)) return@get
+            forward(
+                client,
+                config.dashboardServiceBaseUrl,
+                call.request.uri,
+                call,
+                deps,
+                scopeFilterHint = true,
+            )
+        }
         proxyPrefix(
             "/work-orders",
             config.dashboardServiceBaseUrl,
