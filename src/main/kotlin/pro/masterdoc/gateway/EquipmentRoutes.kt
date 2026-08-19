@@ -36,7 +36,7 @@ fun Application.installEquipmentRoutes(config: GatewayConfig, deps: GatewayDeps)
             config.catalogServiceBaseUrl,
             client,
             deps,
-            readFeatures = listOf("equipment", "admin", "tickets"),
+            readFeatures = listOf("equipment", "admin", "tickets", "warehouse"),
             writeFeatures = listOf("equipment", "admin"),
         )
         installAssetProxyRoutes(config.catalogServiceBaseUrl, client, deps)
@@ -149,7 +149,7 @@ private fun io.ktor.server.routing.Routing.installAssetProxyRoutes(
                         listOf("tickets", "engineer", "equipment", "admin")
                     method == HttpMethod.Get && isQrPdfPath(uri) ->
                         listOf("equipment", "admin")
-                    method == HttpMethod.Get -> listOf("equipment", "tickets")
+                    method == HttpMethod.Get -> listOf("equipment", "tickets", "warehouse")
                     else -> listOf("equipment")
                 }
             if (!call.requireAnyFeature(deps, requiredFeatures)) return@handle
@@ -274,7 +274,7 @@ private fun io.ktor.server.routing.Routing.proxyPrefix(
     }
 }
 
-private suspend fun forward(
+internal suspend fun forward(
     client: HttpClient,
     baseUrl: String,
     uri: String,
