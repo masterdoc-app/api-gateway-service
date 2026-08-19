@@ -75,6 +75,7 @@ jobs:
               'MAP_SERVICE_BASE_URL=http://host.docker.internal:8100' \
               'AI_MESSAGE_SERVICE_BASE_URL=http://host.docker.internal:8101' \
               'AI_MESSAGE_INTERNAL_TOKEN=' \
+              'WAREHOUSE_SERVICE_BASE_URL=http://host.docker.internal:8104' \
               'CORS_ORIGINS=https://app.fixaverse.ru,https://copilot.fixaverse.ru,https://copilot.masterdoc.pro,http://localhost:8080' \
               > /etc/masterdoc-api-gateway/.env
             chmod 600 /etc/masterdoc-api-gateway/.env
@@ -97,6 +98,7 @@ jobs:
           upsert_env AI_MESSAGE_SERVICE_BASE_URL 'http://host.docker.internal:8101'
           upsert_env ATTACHMENT_SERVICE_BASE_URL 'http://host.docker.internal:8102'
           upsert_env COMMENT_SERVICE_BASE_URL 'http://host.docker.internal:8103'
+          upsert_env WAREHOUSE_SERVICE_BASE_URL 'http://host.docker.internal:8104'
           if [ -n "${AI_MESSAGE_INTERNAL_TOKEN:-}" ]; then upsert_env AI_MESSAGE_INTERNAL_TOKEN "$AI_MESSAGE_INTERNAL_TOKEN"; fi
           chmod 600 /etc/masterdoc-api-gateway/.env
           REMOTE

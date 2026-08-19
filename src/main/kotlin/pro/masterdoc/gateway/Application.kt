@@ -60,6 +60,7 @@ fun Application.module(
     installFeaturesRoutes(deps)
     installV1ProxyRoutes(deps)
     installEquipmentRoutes(config, deps)
+    installWarehouseRoutes(config, deps)
     installAdminUserRoutes(deps)
     installAdminRoleRoutes(deps)
     installAdminAuditRoutes(deps)

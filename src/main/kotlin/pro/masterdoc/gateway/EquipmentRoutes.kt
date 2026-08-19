@@ -274,7 +274,7 @@ private fun io.ktor.server.routing.Routing.proxyPrefix(
     }
 }
 
-private suspend fun forward(
+internal suspend fun forward(
     client: HttpClient,
     baseUrl: String,
     uri: String,

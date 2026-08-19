@@ -38,6 +38,7 @@ class ProductFeaturesTest {
                 "map",
                 "reports",
                 "tickets",
+                "warehouse",
             ),
             ProductFeatures.catalog().items.map { it.id },
         )

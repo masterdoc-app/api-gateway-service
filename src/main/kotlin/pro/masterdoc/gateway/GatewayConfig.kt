@@ -18,6 +18,7 @@ data class GatewayConfig(
     val blackBoxServiceBaseUrl: String,
     val aiMessageServiceBaseUrl: String,
     val mapServiceBaseUrl: String,
+    val warehouseServiceBaseUrl: String,
     val blackBoxInternalToken: String,
     val aiMessageInternalToken: String,
     val corsOrigins: List<String>,
@@ -54,6 +55,8 @@ data class GatewayConfig(
                 aiMessageServiceBaseUrl =
                     System.getenv("AI_MESSAGE_SERVICE_BASE_URL") ?: "http://127.0.0.1:8101",
                 mapServiceBaseUrl = System.getenv("MAP_SERVICE_BASE_URL") ?: "http://127.0.0.1:8100",
+                warehouseServiceBaseUrl =
+                    System.getenv("WAREHOUSE_SERVICE_BASE_URL") ?: "http://127.0.0.1:8104",
                 blackBoxInternalToken = System.getenv("BLACK_BOX_INTERNAL_TOKEN") ?: "",
                 aiMessageInternalToken = System.getenv("AI_MESSAGE_INTERNAL_TOKEN") ?: "",
                 corsOrigins =
@@ -87,6 +90,7 @@ data class GatewayConfig(
                 blackBoxServiceBaseUrl = "http://blackbox.test",
                 aiMessageServiceBaseUrl = "http://ai-message.test",
                 mapServiceBaseUrl = "http://map.test",
+                warehouseServiceBaseUrl = "http://warehouse.test",
                 blackBoxInternalToken = "",
                 aiMessageInternalToken = "",
                 corsOrigins = listOf("http://localhost:8080"),
