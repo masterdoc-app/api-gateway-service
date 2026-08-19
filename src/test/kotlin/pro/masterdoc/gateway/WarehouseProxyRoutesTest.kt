@@ -57,8 +57,8 @@ class WarehouseProxyRoutesTest {
                     }
 
                 assertEquals(HttpStatusCode.OK, response.status)
-                assertEquals("default-org", orgId)
-                assertEquals("unknown", userId)
+                assertEquals("test-org", orgId)
+                assertEquals("test-sub", userId)
             }
         } finally {
             warehouseServer.stop(0)
