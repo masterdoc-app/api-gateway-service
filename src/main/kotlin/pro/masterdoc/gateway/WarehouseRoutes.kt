@@ -9,7 +9,6 @@ import io.ktor.server.application.call
 import io.ktor.server.request.httpMethod
 import io.ktor.server.request.uri
 import io.ktor.server.response.respondText
-import io.ktor.server.routing.handle
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 
