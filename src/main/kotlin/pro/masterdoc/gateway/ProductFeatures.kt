@@ -30,6 +30,7 @@ object ProductFeatures {
             FeatureDefinitionDto("map", "Карта"),
             FeatureDefinitionDto("reports", "Отчёты"),
             FeatureDefinitionDto("tickets", "Заявки"),
+            FeatureDefinitionDto("warehouse", "Склад"),
         )
 
     val ALL: Set<String> = ENTRIES.map { it.id }.toSet()
